@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لوحة المسؤول</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff7f8;--ink:#241a1d;--mut:#8a6b73;--line:#f2b8c6;--ac:#d9577a;--ac2:#b8315a;--red:#c0392b;--ok:#1f8a5b}
+*{box-sizing:border-box;margin:0}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--ink);line-height:1.6}
+.w{max-width:980px;margin:auto;padding:16px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+h1{font-size:1.4rem;font-weight:800;color:var(--ac2)}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 3px 0 var(--line)}
+input,select{width:100%;padding:9px 11px;margin:4px 0;border:1px solid var(--line);border-radius:10px;font:600 .95rem 'Cairo';background:#fff;color:var(--ink)}
+input[type=checkbox]{width:auto;margin:0 0 0 6px}
+label{display:block;font-size:.85rem;color:var(--mut);margin-top:6px}
+button{font:700 .9rem 'Cairo';border-radius:10px;padding:8px 16px;border:0;cursor:pointer;background:var(--ac);color:#fff}
+button.ghost{background:#fff;color:var(--ac2);border:1px solid var(--ac2)}
+button.bad{background:var(--red)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ac2);outline-offset:2px}
+nav{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+nav button{background:#fff;color:var(--ac2);border:1px solid var(--line)}
+nav button.on{background:var(--ac);color:#fff}
+summary{cursor:pointer;font-weight:800;color:var(--ac2)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.code{font:800 1.1rem 'Cairo';direction:ltr;display:inline-block}
+.sub{color:var(--mut);font-size:.88rem}
+.chip{display:inline-block;padding:1px 10px;border-radius:99px;font-size:.8rem;font-weight:700;margin-inline-start:6px;color:#fff;background:var(--ok)}
+.chip.x{background:var(--red)}.chip.d{background:var(--mut)}
+.acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.num{font:800 1.8rem 'Cairo';color:var(--ac2)}
+.stat{text-align:center}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;z-index:10;padding:16px}
+.mo[hidden],[hidden]{display:none!important}
+.mb{width:min(440px,100%);margin:0;max-height:92vh;overflow:auto}
+.mb h3{margin-bottom:6px}.msg{margin:6px 0}.rem{color:var(--ac2);font-weight:800}
+.row2{display:flex;gap:8px;margin-top:10px}
+.err{color:var(--red);font-weight:700;min-height:1.4em}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;padding:8px 20px;border-radius:99px;font-weight:700;z-index:20}
+.toast.bad{background:var(--red)}
+@media(max-width:560px){.g2,.g3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="w">
+ <header><h1>لوحة المسؤول</h1><button class="ghost" id="out" hidden>خروج</button></header>
+ <section class="card" id="lg" style="max-width:420px;margin:30px auto">
+  <label>عنوان السيرفر</label><input id="api" dir="ltr">
+  <label>كود المسؤول</label><input id="ac0" type="password" dir="ltr" autocomplete="off">
+  <p class="err" id="lerr"></p><button id="go">دخول</button>
+ </section>
+ <section id="app" hidden>
+  <nav><button data-t="st">الطلبة</button><button data-t="ex">الامتحانات</button><button data-t="sv">السيرفر</button></nav>
+  <div id="v"></div>
+ </section>
+</div>
+<div class="mo" id="ov" hidden><div class="card mb" id="mbx"></div></div>
+<div class="toast" id="tt" hidden></div>
+<script>
+var YEARS=['4AM','1AS','2AS','3AS'];
+var API=localStorage.getItem('adm_api')||'https://zomorodah-api.zomoroda514.workers.dev',CODE=sessionStorage.getItem('adm_code')||'',TAB='st',CODES=[];
+var ERR={invalid:'كود المسؤول غير صحيح',forbidden:'ليس لديك صلاحية',bad:'تحقق من البيانات',badurl:'الرابط غير صالح',server:'خطأ في السيرفر'};
+var $=function(i){return document.getElementById(i)};
+function E(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function toast(m,bad){var t=$('tt');t.textContent=m;t.className='toast'+(bad?' bad':'');t.hidden=false;clearTimeout(toast.i);toast.i=setTimeout(function(){t.hidden=true},2200)}
+async function api(p,m,b){
+ var r;try{r=await fetch(API+p,{method:m||'GET',headers:{'X-Code':CODE,'X-Device':'admin-tool','Content-Type':'application/json'},body:b?JSON.stringify(b):undefined})}catch(e){throw new Error('تعذّر الاتصال بالخادم')}
+ var j={};try{j=await r.json()}catch(e){}
+ if(!r.ok)throw new Error(ERR[j.error]||'حدث خطأ');return j}
+function modal(h){$('mbx').innerHTML=h;$('ov').hidden=false}
+function closeM(){$('ov').hidden=true}
+async function askN(n,msg){
+ var ph=['هل أنت متأكد؟','هل تريد المتابعة فعلًا؟','انتبه: لا يمكن التراجع بعد التنفيذ.','التأكيد الأخير: هل تنفّذ الآن؟'];
+ for(var k=1;k<=n;k++){
+  var t=n===2?[ph[0],ph[3]][k-1]:ph[k-1];
+  var ok=await new Promise(function(res){
+   modal('<h3>تأكيد '+k+' من '+n+'</h3><p class="msg">'+E(msg)+'</p><p><b>'+t+'</b></p><div class="row2"><button class="bad" id="y">نعم</button><button class="ghost" id="no">إلغاء</button></div>');
+   $('y').onclick=function(){res(true)};$('no').onclick=function(){res(false)}});
+  if(!ok){closeM();return false}}
+ closeM();return true}
+function toS(ms){return new Date(ms).toISOString().replace('T',' ').slice(0,19)}
+function parseS(s){return Date.parse(s.replace(' ','T')+'Z')}
+function rc(){var a=new Uint8Array(5),h='';crypto.getRandomValues(a);a.forEach(function(x){h+=('0'+x.toString(16)).slice(-2)});h=h.toUpperCase();return h.slice(0,5)+'-'+h.slice(5,10)}
+var yopt=YEARS.map(function(y){return '<option>'+y+'</option>'}).join('');
+function cdn(at){var ms=Date.parse(at)-Date.now();if(!(ms>0))return 'انتهى';var d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5),m=Math.floor(ms%36e5/6e4);return 'متبقٍ: '+d+' يوم '+h+' ساعة '+m+' دقيقة'}
+setInterval(function(){document.querySelectorAll('.rem').forEach(function(e){e.textContent=cdn(e.dataset.at)})},30000);
+function fd(s){return new Date(s).toLocaleString('ar-DZ',{dateStyle:'medium',timeStyle:'short'})}
+
+/* ---------- students ---------- */
+async function vSt(){
+ $('v').innerHTML='<div class="card top"><div style="flex:1"><input id="sq" placeholder="ابحث بالكود أو البريد"></div><button id="sgo">بحث</button></div>'+
+ '<details class="card"><summary>إضافة طالب واحد</summary><div class="g2"><div><label>الكود</label><input id="ac" dir="ltr"></div><div><label>البريد (اختياري)</label><input id="ae" dir="ltr"></div></div><div class="g3"><div><label>السنة</label><select id="ay">'+yopt+'</select></div><div><label>المدة بالأيام (فارغ = بلا انتهاء)</label><input id="ad" type="number" min="0" value="30"></div><div><label>عدد الأجهزة</label><input id="av" type="number" min="1" value="1"></div></div><div class="acts"><button id="aadd">إضافة</button><button class="ghost" id="gen">توليد كود</button></div></details>'+
+ '<details class="card"><summary>إضافة جماعية</summary><label>سطر لكل طالب: الكود ثم فاصلة ثم البريد (البريد اختياري)</label><textarea id="bt" rows="6" dir="ltr" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:10px;font:600 .9rem Cairo"></textarea><div class="g3"><div><label>السنة</label><select id="by">'+yopt+'</select></div><div><label>المدة بالأيام</label><input id="bd" type="number" min="0" value="30"></div><div><label>عدد الأجهزة</label><input id="bv" type="number" min="1" value="1"></div></div><div class="acts"><button id="badd">إضافة الكل</button><button class="ghost" id="bgen">توليد 10 أكواد</button></div><p class="sub">الأكواد الموجودة مسبقًا تُتجاهل ولا تتغير.</p></details><div id="sl"></div>';
+ $('sgo').onclick=loadCodes;$('sq').onkeydown=function(e){if(e.key==='Enter')loadCodes()};
+ $('gen').onclick=function(){$('ac').value=rc()};
+ $('bgen').onclick=function(){var s=[];for(var i=0;i<10;i++)s.push(rc());$('bt').value=($('bt').value?$('bt').value+'\n':'')+s.join('\n')};
+ $('aadd').onclick=async function(){
+  var code=$('ac').value.trim().toUpperCase();if(!code)return toast('اكتب الكود أو ولّده',1);
+  if(CODES.some(function(c){return c.code===code})&&!(await askN(2,'الكود '+code+' موجود وسيتم استبدال بياناته')))return;
+  var d=+$('ad').value;
+  try{await api('/api/admin/code','POST',{code:code,email:$('ae').value.trim(),year:$('ay').value,expires_at:d>0?toS(Date.now()+d*864e5):null,max_devices:+$('av').value||1,disabled:false});toast('تمت الإضافة');$('ac').value='';loadCodes()}catch(e){toast(e.message,1)}};
+ $('badd').onclick=async function(){
+  var rows=$('bt').value.split('\n').map(function(l){var p=l.split(/[,;\t]/);return{code:(p[0]||'').trim(),email:(p[1]||'').trim()}}).filter(function(r){return r.code});
+  if(!rows.length)return toast('لا توجد أكواد',1);var d=+$('bd').value;
+  try{var j=await api('/api/admin/bulk','POST',{rows:rows,year:$('by').value,expires_at:d>0?toS(Date.now()+d*864e5):null,max_devices:+$('bv').value||1});toast('أُضيف '+j.added+' من '+j.sent);$('bt').value='';loadCodes()}catch(e){toast(e.message,1)}};
+ $('v').onclick=stClick;
+ loadCodes()}
+async function loadCodes(){
+ try{var j=await api('/api/admin/codes?q='+encodeURIComponent(($('sq')||{}).value||''));CODES=j.codes}catch(e){return toast(e.message,1)}
+ var now=toS(Date.now());
+ $('sl').innerHTML=CODES.length?CODES.map(function(c){
+  var xp=c.expires_at&&c.expires_at<now,st=c.disabled?'<span class="chip d">موقوف</span>':xp?'<span class="chip x">منتهٍ</span>':'<span class="chip">فعّال</span>';
+  return '<div class="card"><div class="top"><div><span class="code">'+E(c.code)+'</span>'+st+'<div class="sub">'+E(c.email||'بدون بريد')+' — '+E(c.year)+'</div></div><div class="sub">'+(c.expires_at?'ينتهي: '+E(new Date(parseS(c.expires_at)).toLocaleDateString('ar-DZ')):'بلا انتهاء')+'<br>الأجهزة: '+c.devs+' / '+c.max_devices+'</div></div><div class="acts"><button data-a="ed" data-c="'+E(c.code)+'">تعديل</button><button class="ghost" data-a="rs" data-c="'+E(c.code)+'">تصفير الأجهزة</button><button class="bad" data-a="dl" data-c="'+E(c.code)+'">حذف</button></div></div>'}).join(''):'<div class="card sub">لا توجد نتائج</div>'}
+async function stClick(e){
+ var b=e.target.closest('button');if(!b||!b.dataset.a)return;var code=b.dataset.c,c=CODES.filter(function(x){return x.code===code})[0];
+ if(b.dataset.a==='rs'){if(await askN(2,'تصفير أجهزة '+code+' (يستطيع تسجيل الدخول من أجهزة جديدة)')){try{await api('/api/admin/devices-reset','POST',{code:code});toast('تم التصفير');loadCodes()}catch(er){toast(er.message,1)}}}
+ else if(b.dataset.a==='dl'){if(await askN(4,'حذف الكود '+code+' نهائيًا مع أجهزته')){try{await api('/api/admin/code/'+encodeURIComponent(code),'DELETE');toast('تم الحذف');loadCodes()}catch(er){toast(er.message,1)}}}
+ else if(b.dataset.a==='ed'&&c){
+  modal('<h3>تعديل '+E(code)+'</h3><label>البريد</label><input id="eem" dir="ltr" value="'+E(c.email||'')+'"><div class="g2"><div><label>السنة</label><select id="eyr">'+yopt+'</select></div><div><label>عدد الأجهزة</label><input id="edv" type="number" min="1" value="'+c.max_devices+'"></div></div><label>تمديد بعدد أيام (يُضاف من اليوم أو من تاريخ الانتهاء إن لم ينتهِ)</label><input id="edays" type="number" min="0" placeholder="مثال: 30"><label><input id="eno" type="checkbox"'+(c.expires_at?'':' checked')+'>بلا انتهاء</label><label><input id="edis" type="checkbox"'+(c.disabled?' checked':'')+'>إيقاف هذا الكود</label><p class="err" id="eer"></p><div class="row2"><button id="esave">حفظ</button><button class="ghost" id="ecan">إلغاء</button></div>');
+  $('eyr').value=c.year;$('ecan').onclick=closeM;
+  $('esave').onclick=async function(){
+   var exp=c.expires_at;if($('eno').checked)exp=null;else{var d=+$('edays').value;if(d>0){var base=Math.max(Date.now(),c.expires_at?parseS(c.expires_at):0);exp=toS(base+d*864e5)}}
+   try{await api('/api/admin/code','POST',{code:code,email:$('eem').value.trim(),year:$('eyr').value,expires_at:exp,max_devices:+$('edv').value||1,disabled:$('edis').checked});closeM();toast('تم الحفظ');loadCodes()}catch(er){$('eer').textContent=er.message}}}}
+
+/* ---------- exams ---------- */
+async function vEx(){
+ $('v').innerHTML='<div class="card"><div class="g3"><div><label>اسم الامتحان</label><input id="xt"></div><div><label>السنة</label><select id="xy"><option value="ALL">كل السنوات</option>'+yopt+'</select></div><div><label>التاريخ والوقت</label><input id="xa" type="datetime-local"></div></div><div class="acts"><button id="xadd">إضافة امتحان</button></div></div><div id="xl"></div>';
+ $('xadd').onclick=async function(){var t=$('xt').value.trim(),a=$('xa').value;if(!t||!a)return toast('اكتب الاسم والتاريخ',1);
+  try{await api('/api/exam','POST',{title:t,year:$('xy').value,at:a});toast('تمت الإضافة');$('xt').value='';vExList()}catch(e){toast(e.message,1)}};
+ $('v').onclick=async function(e){var b=e.target.closest('button');if(!b||b.dataset.a!=='xd')return;
+  if(await askN(2,'حذف الامتحان «'+b.dataset.n+'»')){try{await api('/api/exam/'+b.dataset.c,'DELETE');toast('تم الحذف');vExList()}catch(er){toast(er.message,1)}}};
+ vExList()}
+async function vExList(){
+ try{var j=await api('/api/admin/exams');$('xl').innerHTML=j.exams.length?j.exams.map(function(x){return '<div class="card top"><div><b>'+E(x.title)+'</b><div class="sub">'+(x.year==='ALL'?'كل السنوات':E(x.year))+' — '+E(fd(x.at))+'</div><div class="rem" data-at="'+E(x.at)+'">'+cdn(x.at)+'</div></div><button class="bad" data-a="xd" data-c="'+x.id+'" data-n="'+E(x.title)+'">حذف</button></div>'}).join(''):'<div class="card sub">لا توجد امتحانات</div>'}catch(e){toast(e.message,1)}}
+
+/* ---------- server ---------- */
+async function vSv(){
+ $('v').innerHTML='<div class="g3" id="sts"></div><div class="card"><b>حذف الاشتراكات المنتهية</b><p class="sub">يحذف كل الأكواد التي انتهت مدتها مع أجهزتها.</p><div class="acts"><button class="bad" id="cl">حذف المنتهية</button></div></div><div class="card"><b>حذف كل محتوى سنة</b><p class="sub">يحذف كل الفصول والروابط لسنة كاملة.</p><select id="dy">'+yopt+'</select><div class="acts"><button class="bad" id="dyb">حذف محتوى السنة</button></div></div>';
+ try{var s=await api('/api/admin/stats'),L={codes:'الأكواد',active:'الفعّالة',devices:'الأجهزة',chapters:'الفصول',items:'العناصر',exams:'الامتحانات'};
+  $('sts').innerHTML=Object.keys(L).map(function(k){return '<div class="card stat"><div class="num">'+s[k]+'</div><div class="sub">'+L[k]+'</div></div>'}).join('')}catch(e){toast(e.message,1)}
+ $('cl').onclick=async function(){if(await askN(4,'حذف كل الاشتراكات المنتهية نهائيًا')){try{var j=await api('/api/admin/cleanup','POST',{});toast('حُذف '+j.removed+' كود');vSv()}catch(e){toast(e.message,1)}}};
+ $('dyb').onclick=async function(){var y=$('dy').value;if(await askN(4,'حذف كل فصول وروابط السنة '+y+' نهائيًا')){try{await api('/api/admin/year/'+y,'DELETE');toast('تم الحذف');vSv()}catch(e){toast(e.message,1)}}}}
+
+/* ---------- shell ---------- */
+function show(t){TAB=t;document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',b.dataset.t===t)});$('v').onclick=null;({st:vSt,ex:vEx,sv:vSv})[t]()}
+document.querySelector('nav').onclick=function(e){var b=e.target.closest('button');if(b)show(b.dataset.t)};
+async function enter(){
+ API=$('api').value.trim().replace(/\/+$/,'');CODE=$('ac0').value.trim()||CODE;$('lerr').textContent='';
+ try{await api('/api/admin/stats');localStorage.setItem('adm_api',API);sessionStorage.setItem('adm_code',CODE);$('lg').hidden=true;$('app').hidden=false;$('out').hidden=false;show(TAB)}
+ catch(e){$('lerr').textContent=e.message;CODE='';sessionStorage.removeItem('adm_code')}}
+$('go').onclick=enter;$('ac0').onkeydown=function(e){if(e.key==='Enter')enter()};
+$('out').onclick=async function(){if(await askN(2,'تسجيل الخروج من لوحة المسؤول')){sessionStorage.removeItem('adm_code');location.reload()}};
+$('api').value=API;if(CODE)enter();
+</script>
+</body>
+</html>

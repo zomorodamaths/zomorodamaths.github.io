@@ -38,7 +38,7 @@ summary{cursor:pointer;font-weight:800;color:var(--ac2)}
 .mo[hidden],[hidden]{display:none!important}
 .mb{width:min(440px,100%);margin:0;max-height:92vh;overflow:auto}
 .mb h3{margin-bottom:6px}.msg{margin:6px 0}.rem{color:var(--ac2);font-weight:800}
-table{border-collapse:collapse;width:100%}th,td{border:1px solid var(--line);padding:8px 10px;text-align:start}th{background:#fff0f3;color:var(--ac2)}.fx{direction:ltr;font-weight:700}
+table{border-collapse:collapse;width:100%}.bdg{background:#e11d48;color:#fff;border-radius:99px;padding:0 7px;font-size:.75rem;margin-inline-start:6px}th,td{border:1px solid var(--line);padding:8px 10px;text-align:start}th{background:#fff0f3;color:var(--ac2)}.fx{direction:ltr;font-weight:700}
 .row2{display:flex;gap:8px;margin-top:10px}
 .err{color:var(--red);font-weight:700;min-height:1.4em}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;padding:8px 20px;border-radius:99px;font-weight:700;z-index:20}
@@ -55,7 +55,7 @@ table{border-collapse:collapse;width:100%}th,td{border:1px solid var(--line);pad
   <p class="err" id="lerr"></p><button id="go">دخول</button>
  </section>
  <section id="app" hidden>
-  <nav><button data-t="st">الطلبة</button><button data-t="ex">الامتحانات</button><button data-t="fm">القوانين</button><button data-t="sv">السيرفر</button></nav>
+  <nav><button data-t="st">الطلبة</button><button data-t="ex">الامتحانات</button><button data-t="ms">الرسائل</button><button data-t="fm">القوانين</button><button data-t="sv">السيرفر</button></nav>
   <div id="v"></div>
  </section>
 </div>
@@ -138,6 +138,16 @@ async function vEx(){
 async function vExList(){
  try{var j=await api('/api/admin/exams');$('xl').innerHTML=j.exams.length?j.exams.map(function(x){return '<div class="card top"><div><b>'+E(x.title)+'</b><div class="sub">'+(x.year==='ALL'?'كل السنوات':E(x.year))+' — '+E(fd(x.at))+'</div><div class="rem" data-at="'+E(x.at)+'">'+cdn(x.at)+'</div></div><button class="bad" data-a="xd" data-c="'+x.id+'" data-n="'+E(x.title)+'">حذف</button></div>'}).join(''):'<div class="card sub">لا توجد امتحانات</div>'}catch(e){toast(e.message,1)}}
 
+/* ---------- messages ---------- */
+function setBadge(n){document.querySelector('nav [data-t=ms]').innerHTML='الرسائل'+(n?'<span class="bdg">'+n+'</span>':'')}
+async function vMs(){
+ $('v').innerHTML='<div id="ml"></div>';
+ $('v').onclick=async function(e){var b=e.target.closest('button');if(!b||b.dataset.a!=='md')return;
+  if(await askN(2,'حذف رسالة الطالب '+b.dataset.c)){try{await api('/api/admin/message/'+encodeURIComponent(b.dataset.c),'DELETE');toast('تم الحذف');vMs()}catch(er){toast(er.message,1)}}};
+ try{var j=await api('/api/admin/messages');
+  $('ml').innerHTML=j.messages.length?j.messages.map(function(m){return '<div class="card"><div class="top"><div><span class="code">'+E(m.code)+'</span>'+(m.seen?'':'<span class="chip">جديد</span>')+'<div class="sub">'+E(m.email||'بدون بريد')+(m.year?' — '+E(m.year):'')+'</div></div><div class="sub">'+E(new Date(m.created_at.replace(' ','T')+'Z').toLocaleString('ar-DZ',{dateStyle:'medium',timeStyle:'short'}))+'</div></div><p style="white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0">'+E(m.body)+'</p><button class="bad" data-a="md" data-c="'+E(m.code)+'">حذف</button></div>'}).join(''):'<div class="card sub">لا توجد رسائل</div>';
+  await api('/api/admin/messages-seen','POST',{});setBadge(0)}catch(e){toast(e.message,1)}}
+
 /* ---------- formulas ---------- */
 async function vFm(){
  $('v').innerHTML='<div class="card"><div class="g3"><div><label>السنة</label><select id="fy">'+yopt+'</select></div><div><label>اسم القانون</label><input id="fn"></div><div><label>الصيغة (نص عادي)</label><input id="fx" dir="ltr"></div></div><div class="acts"><button id="fadd">إضافة قانون</button></div></div><div id="fl"></div>';
@@ -160,7 +170,7 @@ async function dlBackup(name){
 /* ---------- server ---------- */
 async function vSv(){
  $('v').innerHTML='<div class="g3" id="sts"></div><div class="card"><b>نسخة احتياطية</b><p class="sub" id="lbk"></p><p class="sub">تشمل الأكواد والأجهزة والفصول والروابط والامتحانات والقوانين.</p><div class="acts"><button id="bk">تنزيل نسخة احتياطية</button><button class="bad" id="rsb">استرجاع من ملف</button></div><input type="file" id="rf" accept=".json,application/json" hidden></div><div class="card"><b>حذف الاشتراكات المنتهية</b><p class="sub">يحذف كل الأكواد التي انتهت مدتها مع أجهزتها.</p><div class="acts"><button class="bad" id="cl">حذف المنتهية</button></div></div><div class="card"><b>حذف كل محتوى سنة</b><p class="sub">يحذف كل الفصول والروابط لسنة كاملة.</p><select id="dy">'+yopt+'</select><div class="acts"><button class="bad" id="dyb">حذف محتوى السنة</button></div></div>';
- try{var s=await api('/api/admin/stats'),L={codes:'الأكواد',active:'الفعّالة',devices:'الأجهزة',chapters:'الفصول',items:'العناصر',exams:'الامتحانات',formulas:'القوانين'};
+ try{var s=await api('/api/admin/stats'),L={codes:'الأكواد',active:'الفعّالة',devices:'الأجهزة',chapters:'الفصول',items:'العناصر',exams:'الامتحانات',formulas:'القوانين',messages:'الرسائل'};
   $('sts').innerHTML=Object.keys(L).map(function(k){return '<div class="card stat"><div class="num">'+s[k]+'</div><div class="sub">'+L[k]+'</div></div>'}).join('')}catch(e){toast(e.message,1)}
  $('lbk').textContent=localStorage.getItem('adm_lastbk')?'آخر نسخة: '+fd(localStorage.getItem('adm_lastbk')):'لم تُنزَّل نسخة بعد';
  $('bk').onclick=async function(){try{await dlBackup('backup')}catch(e){toast(e.message,1)}};
@@ -169,18 +179,18 @@ async function vSv(){
   try{j=JSON.parse(await f.text());if(j.app!=='zomorodah'||!j.tables)throw 0}catch(e){return toast('الملف ليس نسخة صالحة',1)}
   var sm=Object.keys(j.tables).map(function(k){return k+': '+j.tables[k].length}).join(' / ');
   if(!(await askN(4,'استرجاع نسخة بتاريخ '+fd(j.date)+' ('+sm+') سيحذف كل البيانات الحالية ويستبدلها. سيُنزَّل ملف بالبيانات الحالية تلقائيًا قبل ذلك.')))return;
-  try{await dlBackup('before-restore');var order=['codes','devices','chapters','items','exams','formulas'];
+  try{await dlBackup('before-restore');var order=['codes','devices','chapters','items','exams','formulas','messages'];
    for(var t of order){var rows=j.tables[t]||[],i=0;do{await api('/api/admin/restore','POST',{table:t,rows:rows.slice(i,i+200),wipe:i===0});i+=200}while(i<rows.length)}
    toast('تم الاسترجاع');vSv()}catch(e){toast(e.message,1)}};
  $('cl').onclick=async function(){if(await askN(4,'حذف كل الاشتراكات المنتهية نهائيًا')){try{var j=await api('/api/admin/cleanup','POST',{});toast('حُذف '+j.removed+' كود');vSv()}catch(e){toast(e.message,1)}}};
  $('dyb').onclick=async function(){var y=$('dy').value;if(await askN(4,'حذف كل فصول وروابط السنة '+y+' نهائيًا')){try{await api('/api/admin/year/'+y,'DELETE');toast('تم الحذف');vSv()}catch(e){toast(e.message,1)}}}}
 
 /* ---------- shell ---------- */
-function show(t){TAB=t;document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',b.dataset.t===t)});$('v').onclick=null;({st:vSt,ex:vEx,fm:vFm,sv:vSv})[t]()}
+function show(t){TAB=t;document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',b.dataset.t===t)});$('v').onclick=null;({st:vSt,ex:vEx,ms:vMs,fm:vFm,sv:vSv})[t]()}
 document.querySelector('nav').onclick=function(e){var b=e.target.closest('button');if(b)show(b.dataset.t)};
 async function enter(){
  API=$('api').value.trim().replace(/\/+$/,'');CODE=$('ac0').value.trim()||CODE;$('lerr').textContent='';
- try{await api('/api/admin/stats');localStorage.setItem('adm_api',API);sessionStorage.setItem('adm_code',CODE);$('lg').hidden=true;$('app').hidden=false;$('out').hidden=false;show(TAB)}
+ try{var s0=await api('/api/admin/stats');setBadge(s0.unread);localStorage.setItem('adm_api',API);sessionStorage.setItem('adm_code',CODE);$('lg').hidden=true;$('app').hidden=false;$('out').hidden=false;show(TAB)}
  catch(e){$('lerr').textContent=e.message;CODE='';sessionStorage.removeItem('adm_code')}}
 $('go').onclick=enter;$('ac0').onkeydown=function(e){if(e.key==='Enter')enter()};
 $('out').onclick=async function(){if(await askN(2,'تسجيل الخروج من لوحة المسؤول')){sessionStorage.removeItem('adm_code');location.reload()}};

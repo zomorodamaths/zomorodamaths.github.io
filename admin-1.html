@@ -52,6 +52,7 @@ table{border-collapse:collapse;width:100%}.bdg{background:#e11d48;color:#fff;bor
  <section class="card" id="lg" style="max-width:420px;margin:30px auto">
   <label>عنوان السيرفر</label><input id="api" dir="ltr">
   <label>كود المسؤول</label><input id="ac0" type="password" dir="ltr" autocomplete="off">
+  <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="rm" checked>تذكّرني على هذا الجهاز</label>
   <p class="err" id="lerr"></p><button id="go">دخول</button>
  </section>
  <section id="app" hidden>
@@ -62,8 +63,8 @@ table{border-collapse:collapse;width:100%}.bdg{background:#e11d48;color:#fff;bor
 <div class="mo" id="ov" hidden><div class="card mb" id="mbx"></div></div>
 <div class="toast" id="tt" hidden></div>
 <script>
-var YEARS=['4AM','1AS','2AS','3AS'];
-var API=localStorage.getItem('adm_api')||'https://zomorodah-api.zomoroda514.workers.dev',CODE=sessionStorage.getItem('adm_code')||'',TAB='st',CODES=[];
+var YEARS=['1AM','2AM','3AM','4AM','1AS','2AS','3AS'];
+var API=localStorage.getItem('adm_api')||'https://zomorodah-api.zomoroda514.workers.dev',CODE=localStorage.getItem('adm_code')||sessionStorage.getItem('adm_code')||'',TAB='st',CODES=[];
 var ERR={invalid:'كود المسؤول غير صحيح',forbidden:'ليس لديك صلاحية',bad:'تحقق من البيانات',badurl:'الرابط غير صالح',server:'خطأ في السيرفر'};
 var $=function(i){return document.getElementById(i)};
 function E(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -190,11 +191,13 @@ function show(t){TAB=t;document.querySelectorAll('nav button').forEach(function(
 document.querySelector('nav').onclick=function(e){var b=e.target.closest('button');if(b)show(b.dataset.t)};
 async function enter(){
  API=$('api').value.trim().replace(/\/+$/,'');CODE=$('ac0').value.trim()||CODE;$('lerr').textContent='';
- try{var s0=await api('/api/admin/stats');setBadge(s0.unread);localStorage.setItem('adm_api',API);sessionStorage.setItem('adm_code',CODE);$('lg').hidden=true;$('app').hidden=false;$('out').hidden=false;show(TAB)}
- catch(e){$('lerr').textContent=e.message;CODE='';sessionStorage.removeItem('adm_code')}}
+ try{var s0=await api('/api/admin/stats');setBadge(s0.unread);localStorage.setItem('adm_api',API);(function(){var st=$('rm').checked?localStorage:sessionStorage,ot=$('rm').checked?sessionStorage:localStorage;st.setItem('adm_code',CODE);ot.removeItem('adm_code')})();$('lg').hidden=true;$('app').hidden=false;$('out').hidden=false;show(TAB)}
+ catch(e){$('lerr').textContent=e.message;if(e.message===ERR.invalid||e.message===ERR.forbidden){CODE='';localStorage.removeItem('adm_code');sessionStorage.removeItem('adm_code')}}}
 $('go').onclick=enter;$('ac0').onkeydown=function(e){if(e.key==='Enter')enter()};
-$('out').onclick=async function(){if(await askN(2,'تسجيل الخروج من لوحة المسؤول')){sessionStorage.removeItem('adm_code');location.reload()}};
-$('api').value=API;if(CODE)enter();
+$('out').onclick=async function(){if(await askN(2,'تسجيل الخروج من لوحة المسؤول')){localStorage.removeItem('adm_code');sessionStorage.removeItem('adm_code');location.reload()}};
+$('api').value=API;$('rm').checked=!(sessionStorage.getItem('adm_code')&&!localStorage.getItem('adm_code'));if(CODE)enter();
 </script>
 </body>
 </html>
+
+

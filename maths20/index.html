@@ -127,131 +127,6 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding:22px 0 10px
 </style>
 </head>
 <body>
-
- 
- 
- html lang="ar" dir="rtl" data-theme="rose">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Zomorodah Math</title>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Kalam:wght@400;700&family=Kaushan+Script&family=Lora:wght@500;700&display=swap" rel="stylesheet">
-<style>
-[data-theme=rose]{--bg:#fff7f8;--ink:#241a1d;--muted:#8a6b73;--card:#fff;--line:#f2b8c6;--accent:#d9577a;--accent2:#b8315a;--on:#fff;--r:16px;--bs:solid;--sh:0 4px 0 #f2b8c6,0 10px 20px rgba(217,87,122,.12);--fh:'Kaushan Script','Cairo',sans-serif;
- --bgi:linear-gradient(rgba(240,140,165,.22) 1px,transparent 1px),linear-gradient(90deg,rgba(240,140,165,.22) 1px,transparent 1px);--bgs:28px 28px}
-[data-theme=chalk]{--bg:#1f3b34;--ink:#f2f0e6;--muted:#b9c9c1;--card:rgba(255,255,255,.05);--line:#e9e6d8;--accent:#ffd36b;--accent2:#8fe0c0;--on:#1f3b34;--r:8px;--bs:dashed;--sh:none;--fh:'Kalam','Cairo',sans-serif;
- --bgi:radial-gradient(ellipse at 30% 0,rgba(255,255,255,.1),transparent 60%)}
-[data-theme=graph]{--bg:#eaf2fb;--ink:#14213d;--muted:#51608a;--card:#fff;--line:#14213d;--accent:#e0245e;--accent2:#2b59c3;--on:#fff;--r:4px;--bs:solid;--sh:4px 4px 0 var(--ink);--fh:'Lora','Cairo',serif;
- --bgi:linear-gradient(rgba(43,89,195,.15) 1px,transparent 1px),linear-gradient(90deg,rgba(43,89,195,.15) 1px,transparent 1px);--bgs:28px 28px}
-[data-theme=neon]{--bg:#150f33;--ink:#ffffff;--muted:#d9d3fb;--card:rgba(255,255,255,.1);--line:rgba(190,165,255,.6);--accent:#b794ff;--accent2:#5eead4;--on:#150f33;--r:18px;--bs:solid;--sh:0 0 26px rgba(148,100,255,.22);--fh:'Cairo',sans-serif;
- --bgi:radial-gradient(circle at 15% 10%,rgba(139,92,246,.35),transparent 45%),radial-gradient(circle at 90% 80%,rgba(45,212,191,.2),transparent 40%)}
-html{background:var(--bg)}
-*{box-sizing:border-box;margin:0}
-body{font-family:'Cairo',sans-serif;background-color:var(--bg);background-image:var(--bgi);background-size:var(--bgs,auto);background-attachment:fixed;color:var(--ink);min-height:100vh;line-height:1.6}
-svg.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none;vertical-align:-.25em}
-.sym{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
-.sym span{position:absolute;font:700 3.2rem 'Cairo';opacity:.09;color:var(--accent);animation:fl var(--d,26s) ease-in-out infinite alternate;will-change:transform}
-@keyframes fl{from{transform:translate(0,0) rotate(-10deg)}50%{transform:translate(26px,-34px) rotate(6deg)}to{transform:translate(-22px,30px) rotate(12deg)}}
-.wrap{position:relative;z-index:1;max-width:880px;margin:auto;padding:16px}
-.top{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:6px 0 14px}
-.brand{display:flex;align-items:center;gap:10px;font:800 1.1rem var(--fh)}
-.av{border-radius:50%;object-fit:cover;border:3px solid #fff;box-shadow:0 0 0 2px var(--line),0 6px 14px rgba(0,0,0,.18)}
-.brand .av{width:40px;height:40px}
-.ctl{display:flex;gap:8px;flex-wrap:wrap}
-.seg{display:flex;border:1px var(--bs) var(--line);border-radius:var(--r);overflow:hidden;background:var(--card)}
-.seg button{background:none;border:0;color:var(--ink);padding:5px 11px;font:600 .85rem 'Cairo';cursor:pointer}
-.seg button.on{background:var(--accent);color:var(--on)}
-button:focus-visible,summary:focus-visible{outline:3px solid var(--accent2);outline-offset:2px}
-.hero{display:grid;grid-template-columns:1.5fr 1fr;gap:14px;margin:6px 0 18px}
-.box{background:var(--card);border:1px var(--bs) var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:18px;backdrop-filter:blur(6px)}
-.prof{display:flex;align-items:center;gap:16px}
-.prof .av{width:112px;height:112px;border-width:5px}
-.prof h1{font:700 1.35rem var(--fh);line-height:1.4}
-.prof p{color:var(--muted);font-size:.92rem;margin-top:2px}
-.count{text-align:center;display:flex;flex-direction:column;justify-content:center}
-.count .n{font:800 3.4rem 'Cairo';color:var(--accent2);line-height:1}
-.count p{color:var(--muted);font-size:.9rem}
-.years{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
-.years>span{color:var(--muted);font-size:.9rem}
-.chip{background:var(--card);color:var(--ink);border:1px var(--bs) var(--line);border-radius:999px;padding:5px 14px;font:600 .9rem 'Cairo';cursor:pointer;display:inline-flex;gap:6px;align-items:center}
-.chip.on{background:var(--accent2);color:var(--on)}
-.tree{display:grid;gap:12px}
-details{border-radius:var(--r)}
-summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;user-select:none}
-summary::-webkit-details-marker{display:none}
-.chev{margin-inline-start:auto;transition:transform .2s}
-[dir=ltr] details:not([open])>summary .chev{transform:rotate(-90deg)}
-[dir=rtl] details:not([open])>summary .chev{transform:rotate(90deg)}
-.l1{background:var(--card);border:1px var(--bs) var(--line);box-shadow:var(--sh);backdrop-filter:blur(6px)}
-.l1>summary{padding:14px 16px;font:700 1.15rem var(--fh);color:var(--accent2)}
-.l1>summary .cnt{font:600 .8rem 'Cairo';color:var(--muted)}
-.kids{padding:0 16px 14px}
-.l2{border-top:1px var(--bs) var(--line)}
-.l2>summary{padding:10px 4px;font-weight:600}
-.l2>summary small{color:var(--accent);font-weight:700}
-.leaves{margin-inline-start:14px;padding-inline-start:12px;border-inline-start:2px var(--bs) var(--line)}
-.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0}
-.row span{display:flex;gap:8px;align-items:center}
-.go{background:none;border:1px solid var(--accent2);color:var(--accent2);border-radius:var(--r);padding:2px 14px;font:600 .85rem 'Cairo';cursor:pointer}
-.go:hover{background:var(--accent2);color:var(--on)}
-.lock{text-align:center;padding:34px 18px}
-.lock svg.i{width:2.6rem;height:2.6rem;color:var(--accent)}
-.lock p{color:var(--muted);margin:6px 0 14px}
-.cta{background:var(--accent);color:var(--on);border:0;border-radius:var(--r);padding:9px 22px;font:700 1rem 'Cairo';cursor:pointer}
-footer{text-align:center;color:var(--muted);font-size:.85rem;padding:22px 0 10px}
-.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--accent);color:var(--on);padding:8px 20px;border-radius:999px;font-weight:700;opacity:0;transition:opacity .25s;z-index:5;pointer-events:none}
-.toast.show{opacity:1}
-.srch{display:flex;align-items:center;gap:8px;background:var(--card);border:1px var(--bs) var(--line);border-radius:var(--r);padding:6px 12px;margin-bottom:12px}
-.srch input{flex:1;background:none;border:0;color:var(--ink);font:600 1rem 'Cairo';outline:0;min-width:0}
-.srch:focus-within{outline:3px solid var(--accent2)}
-.bar{height:10px;border-radius:99px;background:var(--card);border:1px var(--bs) var(--line);overflow:hidden}
-.fill{height:100%;width:0;background:var(--accent);transition:width .4s}
-.meta{display:flex;justify-content:space-between;color:var(--muted);font-size:.85rem;margin:4px 0 14px}
-.meta span{display:flex;gap:6px;align-items:center}
-.chk{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);background:none;color:transparent;cursor:pointer;display:grid;place-items:center;padding:0}
-.chk.on{background:var(--accent2);border-color:var(--accent2);color:var(--on)}
-.chk svg.i{width:16px;height:16px}
-.math{font:700 1.5rem 'Cairo';direction:ltr;text-align:center;padding:10px 0}
-.ans{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
-.ans input{width:130px;padding:7px 10px;border-radius:var(--r);border:1px var(--bs) var(--line);background:var(--card);color:var(--ink);font:700 1rem 'Cairo';text-align:center}
-.res{text-align:center;min-height:1.6em;margin-top:8px;font-weight:700;color:var(--accent2)}
-.tm{font:800 3rem 'Cairo';text-align:center;color:var(--accent2);direction:ltr}
-.row code{font:600 1rem 'Cairo';direction:ltr;color:var(--accent2)}
-[data-theme=neon] body{font-weight:600}[data-theme=neon] .sym span{opacity:.05}
-.out .hero,.out .srch,.out .years,.out .bar,.out .meta,.out main,.out footer,.out #outbtn{display:none}
-#login{display:none;max-width:420px;margin:30px auto;text-align:center}
-.out #login{display:block}
-#login .av{width:120px;height:120px;margin-bottom:10px}
-#login h2{font:700 1.3rem var(--fh);margin-bottom:12px}
-#login input,.mb input{width:100%;margin:6px 0;padding:10px 12px;border-radius:var(--r);border:1px var(--bs) var(--line);background:var(--card);color:var(--ink);font:600 1.05rem 'Cairo';text-align:center}
-.err{color:var(--accent);min-height:1.5em;font-weight:700;margin:6px 0}
-.mo{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;z-index:10;padding:16px}
-.mo[hidden]{display:none}
-.mb{width:min(420px,100%);background:var(--bg);text-align:center}
-.mb h3{font:700 1.15rem var(--fh);margin-bottom:6px}
-.adm{margin-inline-start:auto;display:flex;gap:6px;align-items:center}
-.adm+.chev{margin-inline-start:8px}
-.ib{background:none;border:1px solid var(--accent2);color:var(--accent2);border-radius:50%;width:28px;height:28px;display:grid;place-items:center;cursor:pointer;padding:0}
-.ib:hover{background:var(--accent2);color:var(--on)}
-.ib svg.i{width:15px;height:15px}
-.acts{display:flex;gap:6px;align-items:center}
-.cd{color:var(--accent2);font-weight:800;white-space:nowrap}
-.emp{color:var(--muted);padding:6px 0;font-size:.9rem}
-.outb{display:inline-flex;gap:6px;align-items:center;background:var(--accent);color:var(--on);border:0;border-radius:var(--r);padding:6px 14px;font:700 .85rem 'Cairo';cursor:pointer}
-.tw{overflow-x:auto}.ft{width:100%;border-collapse:collapse}.ft th,.ft td{border:1px var(--bs) var(--line);padding:8px 10px;text-align:start}.ft th{color:var(--accent2)}.fx{font-weight:700;direction:ltr;text-align:left!important}
-#inbbtn{display:none;position:relative}.adm #inbbtn{display:inline-flex}
-.bdg,.pill{background:#e11d48;color:#fff;border-radius:999px;min-width:20px;height:20px;padding:0 6px;font:700 .75rem 'Cairo';display:inline-grid;place-items:center}
-.bdg{position:absolute;top:-8px;inset-inline-end:-8px}.bdg:empty{display:none}
-#mtx{width:100%;padding:10px 12px;border-radius:var(--r);border:1px var(--bs) var(--line);background:var(--card);color:var(--ink);font:600 1rem 'Cairo';resize:vertical}
-.mytext,.msgc p{white-space:pre-wrap;overflow-wrap:anywhere}
-.msgc{padding:8px 0;border-top:1px var(--bs) var(--line)}.msgc p{margin:6px 0 0}
-@media(min-width:900px){.wrap{max-width:none;padding:22px 3cm}.sym span{font-size:5.5rem}.prof .av{width:150px;height:150px}.prof h1{font-size:1.9rem}.prof p{font-size:1.05rem}.count .n{font-size:4.4rem}}
-@media(min-width:1100px){html{font-size:112.5%}.tree{grid-template-columns:repeat(2,1fr);align-items:start}.tree>.lock{grid-column:1/-1}}
-@media(max-width:640px){.hero{grid-template-columns:1fr}.prof .av{width:88px;height:88px}}
-@media(prefers-reduced-motion:reduce){*{transition:none!important}.sym span{animation:none}}
-</style>
-</head>
-<body>
 <div class="sym" aria-hidden="true">
 <span style="top:8%;left:6%;--d:26s;animation-delay:0s">∑</span><span style="top:22%;left:82%;--d:31s;animation-delay:-5s">π</span><span style="top:48%;left:12%;--d:24s;animation-delay:-9s">∫</span><span style="top:62%;left:74%;--d:29s;animation-delay:-3s">√</span><span style="top:80%;left:30%;--d:34s;animation-delay:-12s">∞</span><span style="top:36%;left:50%;--d:27s;animation-delay:-7s">Δ</span><span style="top:88%;left:88%;--d:23s;animation-delay:-2s">θ</span><span style="top:14%;left:40%;--d:32s;animation-delay:-14s">≈</span><span style="top:70%;left:52%;--d:28s;animation-delay:-6s">±</span><span style="top:92%;left:8%;--d:30s;animation-delay:-10s">α</span><span style="top:54%;left:92%;--d:25s;animation-delay:-4s">÷</span><span style="top:30%;left:24%;--d:35s;animation-delay:-16s">x²</span>
 </div>
@@ -293,7 +168,8 @@ fr:{brand:'Planète Zomorodah – Maths',t1:'Rose',t2:'Papier',t3:'Néon',t4:'Ta
 en:{brand:'Zomorodah Math Planet',t1:'Rose',t2:'Graph',t3:'Neon',t4:'Chalkboard',hero:'The planet of mathematics, earned with merit (20 in your pocket)',exam:'days until the exam',foot:'Zomorodah Math Planet',
  yr:'Your year:',lessons:'Lessons',videos:'Videos',summaries:'Summaries',exercises:'Exercises',one:{lessons:'Lesson',videos:'Video',summaries:'Summary',exercises:'Exercise'},
  open:'Open',soon:'Coming soon',locked:'This year is locked',lockp:'Subscribe to this year to unlock its lessons.',sub:'Subscribe to this year',ch:'Chapter'}
-};function svg(p){return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">'+p+'</svg>'}
+};
+function svg(p){return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">'+p+'</svg>'}
 var IC={
  lessons:svg('<path d="M4 19.5V5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5zM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/>'),
  videos:svg('<circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4z"/>'),
@@ -342,6 +218,11 @@ fr:{qbox:'Boîte à questions',qph:'Écris ta question ou ta demande…',qsend:'
 en:{qbox:'Question box',qph:'Write your question or request…',qsend:'Send',qnote:'You can send one message only (1500 characters max). To send a new one, delete your current message first.',qdel:'Delete my message',qdelq:'Delete your message?',qsent:'Sent on',qnew:'New',qempty:'No messages',delmsg:'Delete this message permanently?',sure:'Last confirmation: delete the message now?',e_exists:'You already have a message, delete it first',e_long:'Message is longer than 1500 characters',e_empty:'Write your message first'}};
 for(var L5 in T7)for(var k5 in T7[L5])T[L5][k5]=T7[L5][k5];
 IC.mail=svg('<path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M22 6l-10 7L2 6"/>');
+var T8={ar:{up:'نقل للأعلى',dn:'نقل للأسفل'},fr:{up:'Monter',dn:'Descendre'},en:{up:'Move up',dn:'Move down'}};
+for(var L6 in T8)for(var k6 in T8[L6])T[L6][k6]=T8[L6][k6];
+IC.up=svg('<path d="M18 15l-6-6-6 6"/>');
+IC.dn=svg('<path d="M6 9l6 6 6-6"/>');
+function mv(a,id,i,n,t){return (i>0?ib(a,'data-id="'+id+'" data-d="up"',IC.up,t.up):'')+(i<n-1?ib(a,'data-id="'+id+'" data-d="down"',IC.dn,t.dn):'')}
 var MSG=null,UNREAD=0,INBOX=[],DRAFT='';
 function fdu(s){try{return new Date(s.replace(' ','T')+'Z').toLocaleString({ar:'ar-DZ',fr:'fr-FR',en:'en-GB'}[S.lang],{dateStyle:'medium',timeStyle:'short'})}catch(e){return s}}
 function chain(msgs,cb,i){i=i||0;mdl(msgs[i],[],function(){if(i<msgs.length-1){setTimeout(function(){chain(msgs,cb,i+1)},0);return 'skip'}return cb()})}
@@ -415,10 +296,10 @@ function render(){
   var d=all2.filter(function(i){return P.done['i'+i.id]}).length;
   var body=chs.map(function(c,ci){
    var id='c'+c.id;
-   var rows=c.items.map(function(i){
-    return '<div class="row"><span><button class="chk'+(P.done['i'+i.id]?' on':'')+'" data-d="i'+i.id+'" aria-label="'+t.done+'">'+IC.check+'</button>'+IC[k]+E(i.title)+'</span><span class="acts"><button class="go" data-u="'+E(i.url)+'">'+t.open+'</button>'+(adm?ib('delit','data-i="'+i.id+'"',IC.trash,t.delit):'')+'</span></div>'}).join('');
+   var rows=c.items.map(function(i,ii){
+    return '<div class="row"><span><button class="chk'+(P.done['i'+i.id]?' on':'')+'" data-d="i'+i.id+'" aria-label="'+t.done+'">'+IC.check+'</button>'+IC[k]+E(i.title)+'</span><span class="acts"><button class="go" data-u="'+E(i.url)+'">'+t.open+'</button>'+(adm?(q?'':mv('mvi',i.id,ii,c.items.length,t))+ib('delit','data-i="'+i.id+'"',IC.trash,t.delit):'')+'</span></div>'}).join('');
    if(!rows)rows='<div class="emp">'+t.empty+'</div>';
-   var ac=adm?'<span class="adm">'+ib('additem','data-c="'+c.id+'"',IC.plus,t.additem)+ib('delch','data-c="'+c.id+'"',IC.trash,t.delch)+'</span>':'';
+   var ac=adm?'<span class="adm">'+(q?'':mv('mvc',c.id,ci,chs.length,t))+ib('additem','data-c="'+c.id+'"',IC.plus,t.additem)+ib('delch','data-c="'+c.id+'"',IC.trash,t.delch)+'</span>':'';
    return '<details class="l2" data-id="'+id+'"'+od(id,q)+'><summary><small>'+(ci+1)+'</small>'+E(c.title)+ac+IC.chev+'</summary><div class="leaves">'+rows+'</div></details>'}).join('');
   if(!body)body='<div class="emp">'+t.empty+'</div>';
   var sa=adm?'<span class="adm">'+ib('addch','data-s="'+k+'"',IC.plus,t.addch)+'</span>':'';
@@ -449,6 +330,7 @@ document.addEventListener('click',function(e){
   else if(a==='delch')mdl(t.delch,[],function(){return api('/api/chapter/'+b.dataset.c,'DELETE')});
   else if(a==='delit')mdl(t.delit,[],function(){return api('/api/item/'+b.dataset.i,'DELETE')});
   else if(a==='addex')mdl(t.addex,[t.extitle,{ph:t.exdate,type:'datetime-local'}],function(v){if(!v[0]||!v[1])throw{error:'bad'};return api('/api/exam','POST',{year:S.view,title:v[0],at:v[1]})});
+  else if(a==='mvc'||a==='mvi'){api('/api/move','POST',{type:a==='mvc'?'chapter':'item',id:+b.dataset.id,dir:b.dataset.d}).then(load).catch(function(er){toast(errText(er))})}
   else if(a==='delm')chain([t.delmsg,t.sure],function(){return api('/api/admin/message/'+encodeURIComponent(b.dataset.c),'DELETE')});
   else if(a==='delmy')mdl(t.qdelq,[],function(){return api('/api/message','DELETE')});
   else if(a==='addfm')mdl(t.addfm,[t.fname,t.fexpr],function(v){if(!v[0]||!v[1])throw{error:'bad'};return api('/api/formula','POST',{year:S.view,title:v[0],expr:v[1]})});
@@ -479,3 +361,6 @@ var saved=ls('zmc');if(saved)login(saved);
 </script>
 </body>
 </html>
+
+
+ 

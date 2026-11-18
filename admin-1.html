@@ -50,7 +50,7 @@ table{border-collapse:collapse;width:100%}.bdg{background:#e11d48;color:#fff;bor
 <div class="w">
  <header><h1>لوحة المسؤول</h1><button class="ghost" id="out" hidden>خروج</button></header>
  <section class="card" id="lg" style="max-width:420px;margin:30px auto">
-  <label>عنوان السيرفر</label><input id="api" dir="ltr">
+  <label hidden>عنوان السيرفر</label><input id="api" dir="ltr" hidden>
   <label>كود المسؤول</label><input id="ac0" type="password" dir="ltr" autocomplete="off">
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="rm" checked>تذكّرني على هذا الجهاز</label>
   <p class="err" id="lerr"></p><button id="go">دخول</button>
@@ -63,16 +63,444 @@ table{border-collapse:collapse;width:100%}.bdg{background:#e11d48;color:#fff;bor
 <div class="mo" id="ov" hidden><div class="card mb" id="mbx"></div></div>
 <div class="toast" id="tt" hidden></div>
 <script>
+/* Firebase bridge: same API calls as the old server, answered by Firestore */
+window.__fbReady=new Promise(function(r){window.__fbRes=r});
+window.FBAPI=function(p,m,b,c){
+  var t=new Promise(function(_,rej){setTimeout(function(){rej({error:'net'})},20000)});
+  return Promise.race([window.__fbReady.then(function(f){return f(p,m,b,c)}),t]);
+};
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, signInAnonymously, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { initializeFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, where, writeBatch, runTransaction, getCountFromServer, Timestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC0viwpOZOLHkQmDVqT0Qdz0rcfPkP7KL8",
+  authDomain: "zomorodamaths.firebaseapp.com",
+  projectId: "zomorodamaths",
+  storageBucket: "zomorodamaths.firebasestorage.app",
+  messagingSenderId: "209973089556",
+  appId: "1:209973089556:web:981250e56c8bf3d79a9e01"
+};
+const ADMIN_EMAIL = 'admin@zomoroda.app';
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+
+const YEARS = ['1AM', '2AM', '3AM', '4AM', '1AS', '2AS', '3AS'];
+const SECTIONS = ['lessons', 'videos', 'summaries', 'exercises'];
+const RE_CODE = /^[A-Z0-9-]{3,40}$/;
+const RE_EXP = /^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/;
+const TABLES = {
+  codes: ['code', 'email', 'year', 'expires_at', 'max_devices', 'disabled'],
+  devices: ['code', 'device'],
+  chapters: ['id', 'year', 'section', 'title'],
+  items: ['id', 'chapter_id', 'title', 'url'],
+  exams: ['id', 'year', 'title', 'at'],
+  formulas: ['id', 'year', 'name', 'expr'],
+  messages: ['code', 'body', 'created_at', 'seen'],
+};
+const E = (e) => ({ error: e });
+const nowStr = () => new Date().toISOString().replace('T', ' ').slice(0, 19);
+const uid = () => Date.now() * 1000 + Math.floor(Math.random() * 1000);
+const toTs = (s) => (s ? Timestamp.fromDate(new Date(String(s).replace(' ', 'T') + 'Z')) : null);
+const D = (...p) => doc(db, ...p);
+const COL = (n) => collection(db, n);
+const byId = (a, b) => a.id - b.id;
+let ctx = null, lastYear = YEARS[0];
+const R = { chapters: [], items: [], formulas: [] };
+
+async function delRefs(refs) {
+  for (let i = 0; i < refs.length; i += 400) {
+    const b = writeBatch(db);
+    refs.slice(i, i + 400).forEach((r) => b.delete(r));
+    await b.commit();
+  }
+}
+async function wipeCol(name) { const s = await getDocs(COL(name)); await delRefs(s.docs.map((d) => d.ref)); }
+async function purgeCode(c) {
+  await deleteDoc(D('messages', c));
+  const s = await getDocs(query(COL('sessions'), where('code', '==', c)));
+  await delRefs(s.docs.map((d) => d.ref));
+  await deleteDoc(D('codes', c));
+}
+
+async function ensure(rawCode) {
+  const code = String(rawCode || '').trim().toUpperCase();
+  if (!code) throw E('invalid');
+  if (ctx && ctx.code === code && auth.currentUser && auth.currentUser.uid === ctx.uid) return ctx;
+  ctx = null;
+  if (auth.currentUser && !auth.currentUser.isAnonymous) await signOut(auth);
+  if (!auth.currentUser) await signInAnonymously(auth);
+  let snap = null;
+  if (RE_CODE.test(code)) snap = await getDoc(D('codes', code));
+  if (snap && snap.exists()) {
+    let d = snap.data();
+    if (d.disabled) throw E('invalid');
+    if (d.expires_at && d.expires_at < nowStr()) throw E('expired');
+    let id = auth.currentUser.uid;
+    let s = await getDoc(D('sessions', id));
+    if (s.exists() && s.data().code !== code) {
+      await signOut(auth); await signInAnonymously(auth);
+      id = auth.currentUser.uid; s = null;
+    }
+    if (!(s && s.exists() && s.data().code === code)) {
+      for (let t = 0; t < 2; t++) {
+        if ((d.devs || 0) >= d.max_devices) throw E('devices');
+        try {
+          const b = writeBatch(db);
+          b.set(D('sessions', id), { code });
+          b.update(D('codes', code), { devs: (d.devs || 0) + 1 });
+          await b.commit();
+          break;
+        } catch (e) {
+          if (t === 1) throw e;
+          d = (await getDoc(D('codes', code))).data();
+        }
+      }
+    }
+    ctx = { role: 'student', code, year: d.year, uid: id };
+    return ctx;
+  }
+  try {
+    const cr = await signInWithEmailAndPassword(auth, ADMIN_EMAIL, code);
+    ctx = { role: 'admin', code, uid: cr.user.uid };
+    return ctx;
+  } catch (e) {
+    if (e && e.code === 'auth/network-request-failed') throw E('net');
+    throw E('invalid');
+  }
+}
+
+async function mutContent(year, fn) {
+  const ref = D('content', year);
+  return runTransaction(db, async (t) => {
+    const s = await t.get(ref);
+    const x = s.exists() ? s.data() : {};
+    const o = { year, chapters: x.chapters || [], formulas: x.formulas || [] };
+    const r = fn(o);
+    t.set(ref, o);
+    return r;
+  });
+}
+async function findYear(pred) {
+  for (const y of [lastYear, ...YEARS.filter((v) => v !== lastYear)]) {
+    const s = await getDoc(D('content', y));
+    if (s.exists() && pred(s.data())) return y;
+  }
+  return null;
+}
+async function mutExams(fn) {
+  const ref = D('exams', 'list');
+  return runTransaction(db, async (t) => {
+    const s = await t.get(ref);
+    const items = s.exists() ? s.data().items || [] : [];
+    const r = fn(items);
+    t.set(ref, { items });
+    return r;
+  });
+}
+async function allContent() {
+  const out = [];
+  for (const y of YEARS) {
+    const s = await getDoc(D('content', y));
+    out.push({ year: y, chapters: s.exists() ? s.data().chapters || [] : [], formulas: s.exists() ? s.data().formulas || [] : [] });
+  }
+  return out;
+}
+const pick = (o, cols) => { const r = {}; cols.forEach((c) => (r[c] = o[c] === undefined ? null : o[c])); return r; };
+
+async function handle(path, method, body, code) {
+  const u = new URL(path, 'http://x');
+  const p = u.pathname.replace(/\/+$/, '');
+  const q = Object.fromEntries(u.searchParams);
+  method = method || 'GET';
+  body = body || {};
+  let m;
+  const c = await ensure(code);
+
+  if (p === '/api/login') return { role: c.role, year: c.year || null };
+
+  if (p === '/api/content' && method === 'GET') {
+    let year = c.role === 'admin' ? q.year : c.year;
+    if (!YEARS.includes(year)) year = YEARS[0];
+    if (c.role === 'admin') lastYear = year;
+    const [cs, ex] = await Promise.all([getDoc(D('content', year)), getDoc(D('exams', 'list'))]);
+    const x = cs.exists() ? cs.data() : {};
+    const chapters = (x.chapters || []).slice().sort(byId).map((ch) => ({
+      id: ch.id, section: ch.section, title: ch.title,
+      items: (ch.items || []).slice().sort(byId).map((i) => ({ id: i.id, title: i.title, url: i.url })),
+    }));
+    const exams = ((ex.exists() ? ex.data().items : []) || []).filter((e) => e.year === year || e.year === 'ALL')
+      .sort((a, b) => String(a.at).localeCompare(String(b.at))).map((e) => ({ id: e.id, title: e.title, at: e.at }));
+    const formulas = (x.formulas || []).slice().sort(byId).map((f) => ({ id: f.id, name: f.name, expr: f.expr }));
+    let message = null, unread = 0;
+    if (c.role === 'student') {
+      const s = await getDoc(D('messages', c.code));
+      if (s.exists()) message = { body: s.data().body, created_at: s.data().created_at };
+    } else unread = (await getCountFromServer(query(COL('messages'), where('seen', '==', 0)))).data().count;
+    return { role: c.role, year, chapters, exams, formulas, message, unread };
+  }
+
+  if (p === '/api/message') {
+    if (c.role !== 'student') throw E('forbidden');
+    if (method === 'POST') {
+      const text = String(body.body || '').trim();
+      if (!text) throw E('bad');
+      if (text.length > 1500) throw E('toolong');
+      try { await setDoc(D('messages', c.code), { code: c.code, body: text, created_at: nowStr(), seen: 0 }); }
+      catch (e) { throw E('exists'); }
+      return { ok: true };
+    }
+    if (method === 'DELETE') { await deleteDoc(D('messages', c.code)); return { ok: true }; }
+  }
+
+  if (c.role !== 'admin') throw E('forbidden');
+  const title = String(body.title || '').trim().slice(0, 120);
+
+  if (p === '/api/chapter' && method === 'POST') {
+    if (!YEARS.includes(body.year) || !SECTIONS.includes(body.section) || !title) throw E('bad');
+    await mutContent(body.year, (o) => { o.chapters.push({ id: uid(), section: body.section, title, items: [] }); });
+    return { ok: true };
+  }
+  if (p === '/api/item' && method === 'POST') {
+    const url = String(body.url || '').trim();
+    if (!title || !/^https:\/\//i.test(url) || url.length > 2000) throw E('badurl');
+    const cid = Number(body.chapter_id);
+    const y = await findYear((x) => (x.chapters || []).some((ch) => ch.id === cid));
+    if (!y) throw E('bad');
+    await mutContent(y, (o) => { o.chapters.find((ch) => ch.id === cid).items.push({ id: uid(), title, url }); });
+    return { ok: true };
+  }
+  if ((m = p.match(/^\/api\/chapter\/(\d+)$/)) && method === 'DELETE') {
+    const id = Number(m[1]);
+    const y = await findYear((x) => (x.chapters || []).some((ch) => ch.id === id));
+    if (y) await mutContent(y, (o) => { o.chapters = o.chapters.filter((ch) => ch.id !== id); });
+    return { ok: true };
+  }
+  if ((m = p.match(/^\/api\/item\/(\d+)$/)) && method === 'DELETE') {
+    const id = Number(m[1]);
+    const y = await findYear((x) => (x.chapters || []).some((ch) => (ch.items || []).some((i) => i.id === id)));
+    if (y) await mutContent(y, (o) => { o.chapters.forEach((ch) => { ch.items = (ch.items || []).filter((i) => i.id !== id); }); });
+    return { ok: true };
+  }
+
+  if (p === '/api/admin/exams' && method === 'GET') {
+    const s = await getDoc(D('exams', 'list'));
+    const r = ((s.exists() ? s.data().items : []) || []).slice().sort((a, b) => String(a.at).localeCompare(String(b.at)))
+      .map((e) => ({ id: e.id, year: e.year, title: e.title, at: e.at }));
+    return { exams: r };
+  }
+  if (p === '/api/exam' && method === 'POST') {
+    const okYear = body.year === 'ALL' || YEARS.includes(body.year);
+    if (!okYear || !title || !/^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(String(body.at))) throw E('bad');
+    await mutExams((it) => { it.push({ id: uid(), year: body.year, title, at: body.at }); });
+    return { ok: true };
+  }
+  if ((m = p.match(/^\/api\/exam\/(\d+)$/)) && method === 'DELETE') {
+    const id = Number(m[1]);
+    await mutExams((it) => { const i = it.findIndex((e) => e.id === id); if (i >= 0) it.splice(i, 1); });
+    return { ok: true };
+  }
+
+  if (p === '/api/formula' && method === 'POST') {
+    const expr = String(body.expr || '').trim().slice(0, 300);
+    if (!YEARS.includes(body.year) || !title || !expr) throw E('bad');
+    await mutContent(body.year, (o) => { o.formulas.push({ id: uid(), name: title, expr }); });
+    return { ok: true };
+  }
+  if ((m = p.match(/^\/api\/formula\/(\d+)$/)) && method === 'DELETE') {
+    const id = Number(m[1]);
+    const y = await findYear((x) => (x.formulas || []).some((f) => f.id === id));
+    if (y) await mutContent(y, (o) => { o.formulas = o.formulas.filter((f) => f.id !== id); });
+    return { ok: true };
+  }
+  if (p === '/api/admin/formulas' && method === 'GET') {
+    const y = YEARS.includes(q.year) ? q.year : YEARS[0];
+    const s = await getDoc(D('content', y));
+    const r = ((s.exists() ? s.data().formulas : []) || []).slice().sort(byId).map((f) => ({ id: f.id, name: f.name, expr: f.expr }));
+    return { formulas: r };
+  }
+
+  if (p === '/api/admin/stats' && method === 'GET') {
+    const t = nowStr();
+    const codes = (await getDocs(COL('codes'))).docs.map((d) => d.data());
+    const active = codes.filter((x) => !x.disabled && (!x.expires_at || x.expires_at >= t)).length;
+    const devices = codes.reduce((n, x) => n + (x.devs || 0), 0);
+    const all = await allContent();
+    const chapters = all.reduce((n, y) => n + y.chapters.length, 0);
+    const items = all.reduce((n, y) => n + y.chapters.reduce((k, ch) => k + (ch.items || []).length, 0), 0);
+    const formulas = all.reduce((n, y) => n + y.formulas.length, 0);
+    const ex = await getDoc(D('exams', 'list'));
+    const exams = ex.exists() ? (ex.data().items || []).length : 0;
+    const messages = (await getCountFromServer(COL('messages'))).data().count;
+    const unread = (await getCountFromServer(query(COL('messages'), where('seen', '==', 0)))).data().count;
+    return { codes: codes.length, active, devices, chapters, items, exams, formulas, messages, unread };
+  }
+
+  if (p === '/api/admin/codes' && method === 'GET') {
+    const needle = String(q.q || '').trim().toLowerCase();
+    const r = (await getDocs(COL('codes'))).docs.map((d) => d.data())
+      .filter((x) => !needle || x.code.toLowerCase().includes(needle) || String(x.email || '').toLowerCase().includes(needle))
+      .sort((a, b) => (b.created || 0) - (a.created || 0)).slice(0, 300)
+      .map((x) => ({ code: x.code, email: x.email, year: x.year, expires_at: x.expires_at, max_devices: x.max_devices, disabled: x.disabled, devs: x.devs || 0 }));
+    return { codes: r };
+  }
+  if (p === '/api/admin/code' && method === 'POST') {
+    const cd = String(body.code || '').trim().toUpperCase();
+    const exp = body.expires_at ? String(body.expires_at) : null;
+    const md = Number(body.max_devices);
+    if (!RE_CODE.test(cd) || !YEARS.includes(body.year) || !(md >= 1 && md <= 1000) || (exp && !RE_EXP.test(exp))) throw E('bad');
+    const old = await getDoc(D('codes', cd));
+    const o = old.exists() ? old.data() : {};
+    await setDoc(D('codes', cd), { code: cd, email: String(body.email || '').slice(0, 120), year: body.year, expires_at: exp, exp: toTs(exp),
+      max_devices: md, disabled: body.disabled ? 1 : 0, devs: o.devs || 0, created: o.created || uid() });
+    return { ok: true };
+  }
+  if (p === '/api/admin/bulk' && method === 'POST') {
+    const rows = Array.isArray(body.rows) ? body.rows.slice(0, 500) : [];
+    const exp = body.expires_at ? String(body.expires_at) : null;
+    const md = Number(body.max_devices);
+    if (!rows.length || !YEARS.includes(body.year) || !(md >= 1 && md <= 1000) || (exp && !RE_EXP.test(exp))) throw E('bad');
+    const seen = new Map();
+    for (const r of rows) {
+      const cd = String(r.code || '').trim().toUpperCase();
+      if (RE_CODE.test(cd) && !seen.has(cd)) seen.set(cd, String(r.email || '').slice(0, 120));
+    }
+    if (!seen.size) throw E('bad');
+    const have = new Set((await getDocs(COL('codes'))).docs.map((d) => d.id));
+    const b = writeBatch(db);
+    let added = 0, i = 0;
+    for (const [cd, em] of seen) {
+      if (have.has(cd)) continue;
+      added++;
+      b.set(D('codes', cd), { code: cd, email: em, year: body.year, expires_at: exp, exp: toTs(exp), max_devices: md, disabled: 0, devs: 0, created: uid() + i++ });
+    }
+    if (added) await b.commit();
+    return { added, sent: seen.size };
+  }
+  if (p === '/api/admin/devices-reset' && method === 'POST') {
+    const cd = String(body.code || '').toUpperCase();
+    const s = await getDocs(query(COL('sessions'), where('code', '==', cd)));
+    await delRefs(s.docs.map((d) => d.ref));
+    const ref = D('codes', cd);
+    if ((await getDoc(ref)).exists()) { const b = writeBatch(db); b.update(ref, { devs: 0 }); await b.commit(); }
+    return { ok: true };
+  }
+  if ((m = p.match(/^\/api\/admin\/code\/([A-Za-z0-9-]+)$/)) && method === 'DELETE') { await purgeCode(m[1].toUpperCase()); return { ok: true }; }
+  if (p === '/api/admin/cleanup' && method === 'POST') {
+    const t = nowStr();
+    const exp = (await getDocs(COL('codes'))).docs.map((d) => d.data()).filter((x) => x.expires_at && x.expires_at < t).map((x) => x.code);
+    for (const cd of exp) await purgeCode(cd);
+    return { removed: exp.length };
+  }
+  if ((m = p.match(/^\/api\/admin\/year\/(\w+)$/)) && method === 'DELETE') {
+    if (!YEARS.includes(m[1])) throw E('bad');
+    await mutContent(m[1], (o) => { o.chapters = []; });
+    return { ok: true };
+  }
+
+  if (p === '/api/admin/messages' && method === 'GET') {
+    const ms = (await getDocs(COL('messages'))).docs.map((d) => d.data())
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0, 300);
+    const info = new Map();
+    (await getDocs(COL('codes'))).docs.forEach((d) => info.set(d.id, d.data()));
+    return { messages: ms.map((x) => ({ code: x.code, body: x.body, created_at: x.created_at, seen: x.seen,
+      email: (info.get(x.code) || {}).email || null, year: (info.get(x.code) || {}).year || null })) };
+  }
+  if (p === '/api/admin/messages-seen' && method === 'POST') {
+    const s = await getDocs(query(COL('messages'), where('seen', '==', 0)));
+    for (let i = 0; i < s.docs.length; i += 400) {
+      const b = writeBatch(db);
+      s.docs.slice(i, i + 400).forEach((x) => b.update(x.ref, { seen: 1 }));
+      await b.commit();
+    }
+    return { ok: true };
+  }
+  if ((m = p.match(/^\/api\/admin\/message\/([A-Za-z0-9-]+)$/)) && method === 'DELETE') {
+    await deleteDoc(D('messages', m[1].toUpperCase()));
+    return { ok: true };
+  }
+
+  if (p === '/api/admin/backup' && method === 'GET') {
+    const all = await allContent();
+    const t = {};
+    t.codes = (await getDocs(COL('codes'))).docs.map((d) => pick(d.data(), TABLES.codes));
+    t.devices = (await getDocs(COL('sessions'))).docs.map((d) => ({ code: d.data().code, device: d.id }));
+    t.chapters = []; t.items = []; t.formulas = [];
+    all.forEach((y) => {
+      y.chapters.forEach((ch) => {
+        t.chapters.push({ id: ch.id, year: y.year, section: ch.section, title: ch.title });
+        (ch.items || []).forEach((i) => t.items.push({ id: i.id, chapter_id: ch.id, title: i.title, url: i.url }));
+      });
+      y.formulas.forEach((f) => t.formulas.push({ id: f.id, year: y.year, name: f.name, expr: f.expr }));
+    });
+    const ex = await getDoc(D('exams', 'list'));
+    t.exams = ex.exists() ? (ex.data().items || []).map((e) => pick(e, TABLES.exams)) : [];
+    t.messages = (await getDocs(COL('messages'))).docs.map((d) => pick(d.data(), TABLES.messages));
+    return { app: 'zomorodah', version: 1, date: new Date().toISOString(), tables: t };
+  }
+  if (p === '/api/admin/restore' && method === 'POST') {
+    const t = body.table;
+    if (!Object.prototype.hasOwnProperty.call(TABLES, t)) throw E('bad');
+    const rows = Array.isArray(body.rows) ? body.rows.slice(0, 200) : [];
+    if (t === 'codes') {
+      if (body.wipe) await wipeCol('codes');
+      const b = writeBatch(db);
+      rows.forEach((r, i) => {
+        const cd = String(r.code || '').toUpperCase();
+        if (!RE_CODE.test(cd)) return;
+        b.set(D('codes', cd), { code: cd, email: r.email || '', year: r.year, expires_at: r.expires_at || null, exp: toTs(r.expires_at),
+          max_devices: Number(r.max_devices) || 1, disabled: r.disabled ? 1 : 0, devs: 0, created: uid() + i });
+      });
+      if (rows.length) await b.commit();
+    } else if (t === 'devices') {
+      if (body.wipe) await wipeCol('sessions');
+    } else if (t === 'chapters' || t === 'items' || t === 'formulas') {
+      R[t] = body.wipe ? rows.slice() : R[t].concat(rows);
+      for (const y of YEARS) {
+        const chs = R.chapters.filter((r) => r.year === y).map((r) => ({ id: Number(r.id), section: r.section, title: r.title,
+          items: R.items.filter((i) => Number(i.chapter_id) === Number(r.id)).map((i) => ({ id: Number(i.id), title: i.title, url: i.url })) }));
+        const fms = R.formulas.filter((f) => f.year === y).map((f) => ({ id: Number(f.id), name: f.name, expr: f.expr }));
+        await setDoc(D('content', y), { year: y, chapters: chs, formulas: fms });
+      }
+    } else if (t === 'exams') {
+      const it = rows.map((r) => ({ id: Number(r.id), year: r.year, title: r.title, at: r.at }));
+      await mutExams((cur) => { if (body.wipe) cur.length = 0; it.forEach((x) => cur.push(x)); });
+    } else if (t === 'messages') {
+      if (body.wipe) await wipeCol('messages');
+      const b = writeBatch(db);
+      rows.forEach((r) => { if (r.code) b.set(D('messages', String(r.code).toUpperCase()), { code: String(r.code).toUpperCase(), body: r.body || '', created_at: r.created_at || nowStr(), seen: r.seen ? 1 : 0 }); });
+      if (rows.length) await b.commit();
+    }
+    return { ok: true, rows: rows.length };
+  }
+  throw E('notfound');
+}
+
+window.__fbRes(async function (path, method, body, code) {
+  try { return await handle(path, method, body, code); }
+  catch (e) {
+    if (e && e.error) throw e;
+    const k = e && e.code;
+    if (k === 'permission-denied') { ctx = null; throw E('forbidden'); }
+    if (k === 'unavailable' || k === 'auth/network-request-failed') throw E('net');
+    console.error(e);
+    throw E('server');
+  }
+});
+</script>
+<script>
 var YEARS=['1AM','2AM','3AM','4AM','1AS','2AS','3AS'];
-var API=localStorage.getItem('adm_api')||'https://zomorodah-api.zomoroda514.workers.dev',CODE=localStorage.getItem('adm_code')||sessionStorage.getItem('adm_code')||'',TAB='st',CODES=[];
+var API='',CODE=localStorage.getItem('adm_code')||sessionStorage.getItem('adm_code')||'',TAB='st',CODES=[];
 var ERR={invalid:'كود المسؤول غير صحيح',forbidden:'ليس لديك صلاحية',bad:'تحقق من البيانات',badurl:'الرابط غير صالح',server:'خطأ في السيرفر'};
 var $=function(i){return document.getElementById(i)};
 function E(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function toast(m,bad){var t=$('tt');t.textContent=m;t.className='toast'+(bad?' bad':'');t.hidden=false;clearTimeout(toast.i);toast.i=setTimeout(function(){t.hidden=true},2200)}
 async function api(p,m,b){
- var r;try{r=await fetch(API+p,{method:m||'GET',headers:{'X-Code':CODE,'X-Device':'admin-tool','Content-Type':'application/json'},body:b?JSON.stringify(b):undefined})}catch(e){throw new Error('تعذّر الاتصال بالخادم')}
- var j={};try{j=await r.json()}catch(e){}
- if(!r.ok)throw new Error(ERR[j.error]||'حدث خطأ');return j}
+ try{return await FBAPI(p,m,b,CODE)}
+ catch(e){var k=e&&e.error;throw new Error(k==='net'?'تعذّر الاتصال بالخادم':(ERR[k]||'حدث خطأ'))}}
 function modal(h){$('mbx').innerHTML=h;$('ov').hidden=false}
 function closeM(){$('ov').hidden=true}
 async function askN(n,msg){
@@ -199,5 +627,4 @@ $('api').value=API;$('rm').checked=!(sessionStorage.getItem('adm_code')&&!localS
 </script>
 </body>
 </html>
-
 

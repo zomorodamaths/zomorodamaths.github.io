@@ -73,7 +73,7 @@ window.FBAPI=function(p,m,b,c){
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, signInAnonymously, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { initializeFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, where, writeBatch, runTransaction, getCountFromServer, Timestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { initializeFirestore, doc, getDoc as _getDoc, setDoc as _setDoc, deleteDoc as _deleteDoc, collection, getDocs as _getDocs, query, where, writeBatch as _writeBatch, runTransaction as _runTransaction, getCountFromServer as _getCount, Timestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC0viwpOZOLHkQmDVqT0Qdz0rcfPkP7KL8",
@@ -87,6 +87,31 @@ const ADMIN_EMAIL = 'admin@zomoroda.app';
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+
+
+/* ---- usage counters (this device only, per Pacific-time day = Firebase quota day) ---- */
+const pday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+const loadU = () => { let u = {}; try { u = JSON.parse(localStorage.getItem('fb_usage') || '{}'); } catch (e) {} return u.day === pday() ? u : { day: pday(), r: 0, w: 0, d: 0 }; };
+let U = loadU();
+const saveU = () => { try { localStorage.setItem('fb_usage', JSON.stringify(U)); } catch (e) {} };
+const getDoc = async (...a) => { const s = await _getDoc(...a); U.r++; return s; };
+const getDocs = async (...a) => { const s = await _getDocs(...a); U.r += Math.max(1, s.size); return s; };
+const getCountFromServer = async (...a) => { const s = await _getCount(...a); U.r += Math.max(1, Math.ceil(s.data().count / 1000)); return s; };
+const setDoc = async (...a) => { await _setDoc(...a); U.w++; };
+const deleteDoc = async (...a) => { await _deleteDoc(...a); U.d++; };
+function writeBatch(x) {
+  const b = _writeBatch(x); let w = 0, d = 0;
+  return {
+    set(...a) { w++; b.set(...a); return this; },
+    update(...a) { w++; b.update(...a); return this; },
+    delete(...a) { d++; b.delete(...a); return this; },
+    async commit() { await b.commit(); U.w += w; U.d += d; },
+  };
+}
+const runTransaction = (x, fn) => _runTransaction(x, async (t) => fn({
+  get: async (r) => { U.r++; return t.get(r); },
+  set: (r, v) => { U.w++; return t.set(r, v); },
+}));
 
 const YEARS = ['1AM', '2AM', '3AM', '4AM', '1AS', '2AS', '3AS'];
 const SECTIONS = ['lessons', 'videos', 'summaries', 'exercises'];
@@ -218,6 +243,7 @@ async function handle(path, method, body, code) {
   method = method || 'GET';
   body = body || {};
   let m;
+  if (U.day !== pday()) U = loadU();
   const c = await ensure(code);
 
   if (p === '/api/login') return { role: c.role, year: c.year || null };
@@ -258,6 +284,8 @@ async function handle(path, method, body, code) {
 
   if (c.role !== 'admin') throw E('forbidden');
   const title = String(body.title || '').trim().slice(0, 120);
+
+  if (p === '/api/admin/usage' && method === 'GET') return { day: U.day, r: U.r, w: U.w, d: U.d, lr: 50000, lw: 20000, ld: 20000 };
 
   if (p === '/api/chapter' && method === 'POST') {
     if (!YEARS.includes(body.year) || !SECTIONS.includes(body.section) || !title) throw E('bad');
@@ -488,7 +516,7 @@ window.__fbRes(async function (path, method, body, code) {
     if (k === 'unavailable' || k === 'auth/network-request-failed') throw E('net');
     console.error(e);
     throw E('server');
-  }
+  } finally { saveU(); }
 });
 </script>
 <script>
@@ -601,6 +629,8 @@ async function vSv(){
  $('v').innerHTML='<div class="g3" id="sts"></div><div class="card"><b>نسخة احتياطية</b><p class="sub" id="lbk"></p><p class="sub">تشمل الأكواد والأجهزة والفصول والروابط والامتحانات والقوانين.</p><div class="acts"><button id="bk">تنزيل نسخة احتياطية</button><button class="bad" id="rsb">استرجاع من ملف</button></div><input type="file" id="rf" accept=".json,application/json" hidden></div><div class="card"><b>حذف الاشتراكات المنتهية</b><p class="sub">يحذف كل الأكواد التي انتهت مدتها مع أجهزتها.</p><div class="acts"><button class="bad" id="cl">حذف المنتهية</button></div></div><div class="card"><b>حذف كل محتوى سنة</b><p class="sub">يحذف كل الفصول والروابط لسنة كاملة.</p><select id="dy">'+yopt+'</select><div class="acts"><button class="bad" id="dyb">حذف محتوى السنة</button></div></div>';
  try{var s=await api('/api/admin/stats'),L={codes:'الأكواد',active:'الفعّالة',devices:'الأجهزة',chapters:'الفصول',items:'العناصر',exams:'الامتحانات',formulas:'القوانين',messages:'الرسائل'};
   $('sts').innerHTML=Object.keys(L).map(function(k){return '<div class="card stat"><div class="num">'+s[k]+'</div><div class="sub">'+L[k]+'</div></div>'}).join('')}catch(e){toast(e.message,1)}
+ try{var u=await api('/api/admin/usage'),rw=[['القراءة',u.r,u.lr],['الكتابة',u.w,u.lw],['الحذف',u.d,u.ld]];
+  $('sts').insertAdjacentHTML('afterend','<div class="card"><b>استهلاك Firebase اليوم</b><p class="sub">ما نفّذتَه أنت من هذا الجهاز فقط. حدّ الخطة المجانية يومي ويتجدد منتصف الليل بتوقيت المحيط الهادئ. استهلاك الطلبة كلهم يظهر في لوحة Firebase.</p>'+rw.map(function(x){var pc=Math.min(100,x[1]/x[2]*100);return '<div style="margin:8px 0"><div style="display:flex;justify-content:space-between"><span>'+x[0]+'</span><span class="sub">'+x[1]+' / '+x[2]+'</span></div><div style="height:8px;background:var(--line);border-radius:6px;overflow:hidden"><div style="height:100%;width:'+pc+'%;background:'+(pc>80?'var(--red)':'var(--ac)')+'"></div></div></div>'}).join('')+'<div class="acts"><a href="https://console.firebase.google.com/project/zomorodamaths/firestore/usage" target="_blank" rel="noopener"><button>فتح الاستهلاك الكامل (كل الطلبة)</button></a></div></div>')}catch(e){}
  $('lbk').textContent=localStorage.getItem('adm_lastbk')?'آخر نسخة: '+fd(localStorage.getItem('adm_lastbk')):'لم تُنزَّل نسخة بعد';
  $('bk').onclick=async function(){try{await dlBackup('backup')}catch(e){toast(e.message,1)}};
  $('rsb').onclick=function(){$('rf').click()};
@@ -628,3 +658,5 @@ $('api').value=API;$('rm').checked=!(sessionStorage.getItem('adm_code')&&!localS
 </body>
 </html>
 
+
+            

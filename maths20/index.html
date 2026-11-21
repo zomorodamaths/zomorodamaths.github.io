@@ -135,6 +135,22 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding:22px 0 10px
 @media(min-width:1100px){html{font-size:112.5%}.tree{grid-template-columns:repeat(2,1fr);align-items:start}.tree>.lock{grid-column:1/-1}}
 @media(max-width:640px){.hero{grid-template-columns:1fr}.prof .av{width:88px;height:88px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}.sym span{animation:none}}
+
+.yo{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:50;display:grid;place-items:center;padding:12px}
+.yo[hidden]{display:none}
+.yb{width:min(960px,100%);display:flex;flex-direction:column;gap:8px}
+.yst{position:relative;aspect-ratio:16/9;background:#000;border-radius:var(--r);overflow:hidden;user-select:none;-webkit-user-select:none}
+.yst iframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none}
+.ysh{position:absolute;inset:0;z-index:2;cursor:pointer}
+.ycv{position:absolute;inset:0;z-index:3;background:#000;display:none;place-items:center;color:#fff;font-size:4rem;cursor:pointer}
+.ycv.on{display:grid}
+.ywm{position:absolute;pointer-events:none;color:rgba(255,255,255,.14);font:700 .62rem 'Cairo';direction:ltr;white-space:nowrap;text-shadow:0 0 2px rgba(0,0,0,.35);transition:top 1.5s,left 1.5s}
+@media print{.yo{display:none!important}}
+.yo,.yo *{-webkit-touch-callout:none;-webkit-user-drag:none}
+.yct{display:flex;gap:8px;align-items:center;color:#fff;direction:ltr}
+.yct input[type=range]{flex:1;accent-color:var(--accent)}
+.yct .go{color:#fff;border-color:#fff}
+.yct small{min-width:84px;text-align:center}
 </style>
 </head>
 <body>
@@ -163,6 +179,7 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding:22px 0 10px
  <main class="tree" id="main"></main>
  <footer data-i18n="foot"></footer>
 </div>
+<div class="yo" id="yo" hidden><div class="yb"><div class="yst" id="yst"><div id="ytp"></div><div class="ysh" id="ysh"></div><div class="ycv" id="ycv">▶</div><div id="ywl" style="position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden"></div></div><div class="yct"><button class="go" id="ypl">▶</button><input type="range" id="ysk" min="0" max="1000" value="0"><small id="ytm">0:00</small><button class="go" id="ysp">1x</button><button class="go" id="yfs">⛶</button><button class="go" id="yx">✕</button></div></div></div>
 <div class="toast" id="toast"></div>
 <div class="mo" id="modal" hidden><div class="box mb"><h3 id="mt"></h3><div id="mf"></div><p class="err" id="me"></p><div class="acts" style="justify-content:center"><button class="cta" id="mok"></button><button class="go" id="mc"></button></div></div></div>
 <script>
@@ -187,6 +204,7 @@ const firebaseConfig = {
   appId: "1:209973089556:web:981250e56c8bf3d79a9e01"
 };
 const ADMIN_EMAIL = 'admin@zomoroda.app';
+const LIVE_ON = false; // true = لا يُشاهد الكود نفسه على جهازين في وقت واحد | false = إيقاف القيد
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
@@ -383,6 +401,17 @@ async function handle(path, method, body, code) {
       return { ok: true };
     }
     if (method === 'DELETE') { await deleteDoc(D('messages', c.code)); return { ok: true }; }
+  }
+
+  if (p === '/api/live' && method === 'POST') {
+    if (c.role !== 'student' || !LIVE_ON) return { ok: true };
+    try {
+      const ref = D('live', c.code), sd = await getDoc(ref), now = Date.now(), sid = String(body.sid || '').slice(0, 40);
+      if (body.end) { if (sd.exists() && sd.data().sid === sid) await deleteDoc(ref); return { ok: true }; }
+      if (sd.exists() && sd.data().sid !== sid && now - sd.data().t < 100000) return { taken: true };
+      await setDoc(ref, { code: c.code, sid, t: now });
+      return { ok: true };
+    } catch (e) { return { ok: true, skip: true }; }
   }
 
   if (c.role !== 'admin') throw E('forbidden');
@@ -724,7 +753,7 @@ function ib(a,extra,icon,label){return '<button class="ib" data-a="'+a+'" '+extr
 function api(path,method,body){return FBAPI(path,method,body,CODE)}
 function errText(e){return T[S.lang]['e_'+(e&&e.error)]||T[S.lang].e_net}
 function load(){return api('/api/content?year='+S.view).then(function(j){S.role=j.role;if(j.role==='student'){S.sub=S.view=j.year}DATA=j.chapters;EX=j.exams||[];FMS=j.formulas||[];MSG=j.message||null;UNREAD=j.unread||0;ls('zmc',CODE);render();if(j.role==='admin')api('/api/admin/messages').then(function(r){INBOX=r.messages;render()}).catch(function(){})}).catch(function(e){if(e&&(e.error==='invalid'||e.error==='expired'||e.error==='devices')){logout();$('lerr').textContent=errText(e)}else{toast(errText(e));render()}})}
-function login(code){CODE=code.trim().toUpperCase();if(!CODE)return;$('lerr').textContent='';return load()}
+function login(code){CODE=code.trim().toUpperCase();window.CODE=CODE;if(!CODE)return;$('lerr').textContent='';return load()}
 function logout(){CODE='';S.role=null;DATA=[];EX=[];FMS=[];MSG=null;UNREAD=0;INBOX=[];DRAFT='';ls('zmc',null);render()}
 function cd(at){var ms=new Date(at)-Date.now(),u=T[S.lang].u;if(!(ms>0))return T[S.lang].past;var d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5),m=Math.floor(ms%36e5/6e4);return d+' '+u[0]+' '+h+' '+u[1]+' '+m+' '+u[2]}
 function fd(at){try{return new Date(at).toLocaleString({ar:'ar-DZ',fr:'fr-FR',en:'en-GB'}[S.lang],{dateStyle:'medium',timeStyle:'short'})}catch(e){return at}}
@@ -803,7 +832,7 @@ document.addEventListener('click',function(e){
  if(b.id==='inbbtn'){OPEN.inbox=true;markSeen();render();var dd=document.querySelector('details[data-id=inbox]');if(dd)dd.scrollIntoView({behavior:'smooth'});return}
  if(b.id==='logbtn'){login($('code').value);return}
  if(b.id==='outbtn'){mdl(t.logq1,[],function(){setTimeout(function(){mdl(t.logq2,[],function(){$('modal').hidden=true;logout();return 'skip'})},0);return 'skip'});return}
- if(b.dataset.u){if(/^https:\/\//i.test(b.dataset.u))window.open(b.dataset.u,'_blank','noopener');return}
+ if(b.dataset.u){var yid=window.ytId(b.dataset.u);if(yid){window.playYT(yid);return}if(/^https:\/\//i.test(b.dataset.u))window.open(b.dataset.u,'_blank','noopener');return}
  if(b.dataset.l){S.lang=b.dataset.l;save()}
  else if(b.dataset.t){S.theme=b.dataset.t;save()}
  else if(b.dataset.y){S.view=b.dataset.y;load();return}
@@ -865,7 +894,63 @@ var saved=ls('zmc');if(saved)login(saved);
  },1500)});
 })();
 </script>
+
+<script>
+/* In-app YouTube player: no YouTube UI, no open/share buttons */
+(function(){
+ var P=null,ready=false,pend=null,tm=null,wmt=null,dragging=false,rates=[1,1.25,1.5,2,0.75],ri=0;
+ function $(i){return document.getElementById(i)}
+ window.ytId=function(u){var m=String(u).match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})/);return m?m[1]:null};
+ var tag=document.createElement('script');tag.src='https://www.youtube.com/iframe_api';document.head.appendChild(tag);
+ window.onYouTubeIframeAPIReady=function(){ready=true;if(pend)open(pend)};
+ function f(n){n=Math.floor(n||0);var h=Math.floor(n/3600),m=Math.floor(n%3600/60),s=n%60;return (h?h+':'+('0'+m).slice(-2):m)+':'+('0'+s).slice(-2)}
+ function cover(on){$('ycv').classList.toggle('on',on)}
+ function toggle(){if(!P||!P.getPlayerState)return;if(P.getPlayerState()===1)P.pauseVideo();else P.playVideo()}
+ function mk(){if(!$('ytp')){var d=document.createElement('div');d.id='ytp';$('yst').insertBefore(d,$('ysh'))}}
+ function wm(){var L=$('ywl');L.innerHTML='';var tx=(window.CODE||'')+' · '+new Date().toLocaleDateString('en-GB');
+  for(var i=0;i<10;i++){var w=document.createElement('span');w.className='ywm';w.textContent=tx;w.style.transform='rotate('+(Math.random()*30-15)+'deg)';L.appendChild(w)}
+  function place(){[].forEach.call(L.children,function(w,i){w.style.left=((i%5)*20+Math.random()*10)+'%';w.style.top=(Math.floor(i/5)*50+Math.random()*38)+'%'})}
+  place();clearInterval(wmt);wmt=setInterval(place,3500)}
+ function open(id){
+  $('yo').hidden=false;wm();cover(true);
+  if(!ready){pend=id;return}pend=null;
+  if(P){try{P.destroy()}catch(e){}P=null}mk();
+  P=new YT.Player('ytp',{videoId:id,host:'https://www.youtube-nocookie.com',playerVars:{controls:0,disablekb:1,fs:0,rel:0,modestbranding:1,iv_load_policy:3,playsinline:1,cc_load_policy:0,origin:location.origin},
+   events:{onReady:function(){P.playVideo()},onStateChange:function(e){var s=e.data;cover(s!==1&&s!==3);$('ypl').textContent=s===1?'⏸':'▶';if(s===0){P.seekTo(0,true);P.pauseVideo()}}}});
+  clearInterval(tm);tm=setInterval(function(){if(!P||!P.getDuration||dragging)return;var d=P.getDuration()||0,c=P.getCurrentTime()||0;$('ysk').value=d?Math.round(c/d*1000):0;$('ytm').textContent=f(c)+' / '+f(d)},500)}
+ function close(){$('yo').hidden=true;clearInterval(tm);clearInterval(wmt);try{P&&P.destroy()}catch(e){}P=null;mk()}
+ window.playYT=open;
+ $('ysh').onclick=toggle;$('ycv').onclick=toggle;$('ypl').onclick=toggle;$('yx').onclick=close;
+ $('yo').addEventListener('contextmenu',function(e){e.preventDefault()});
+ $('ysk').addEventListener('input',function(){dragging=true});
+ $('ysk').addEventListener('change',function(){dragging=false;if(P)P.seekTo(P.getDuration()*this.value/1000,true)});
+ $('ysp').onclick=function(){ri=(ri+1)%rates.length;if(P)P.setPlaybackRate(rates[ri]);this.textContent=rates[ri]+'x'};
+ $('yfs').onclick=function(){var e=$('yst');if(document.fullscreenElement)document.exitFullscreen();else if(e.requestFullscreen)e.requestFullscreen();else if(e.webkitRequestFullscreen)e.webkitRequestFullscreen()};
+ document.addEventListener('visibilitychange',function(){if(document.hidden&&P&&P.pauseVideo)P.pauseVideo()});
+ /* ---- protections ---- */
+ function guard(){if($('yo').hidden)return;cover(true);try{P&&P.pauseVideo()}catch(e){}}
+ window.addEventListener('blur',guard);
+ window.addEventListener('pagehide',guard);
+ document.addEventListener('keydown',function(e){if($('yo').hidden)return;var k=(e.key||'').toLowerCase();
+  if(k==='printscreen'||k==='f12'||(e.metaKey&&e.shiftKey)||(e.ctrlKey&&['s','p','u'].indexOf(k)>-1)||(e.ctrlKey&&e.shiftKey&&['i','j','c','s'].indexOf(k)>-1)){guard();e.preventDefault()}},true);
+ document.addEventListener('keyup',function(e){if((e.key||'').toLowerCase()==='printscreen'){guard();try{navigator.clipboard.writeText(' ')}catch(x){}}},true);
+ setInterval(function(){if($('yo').hidden)return;var touch=window.matchMedia&&matchMedia('(pointer:coarse)').matches;
+  if(!touch&&(window.outerWidth-window.innerWidth>220||window.outerHeight-window.innerHeight>260))guard()},1500);
+ var MS={ar:'هذا الكود مستخدم الآن على جهاز آخر',fr:'Ce code est déjà utilisé sur un autre appareil',en:'This code is already in use on another device'};
+ var sid=null,lt=null;
+ function liveStart(){if(sid)return;sid=String(Math.random()).slice(2)+Date.now();var tick=function(){if(!sid)return;
+   window.FBAPI('/api/live','POST',{sid:sid},window.CODE).then(function(r){if(r&&r.taken){var m=MS[(window.S&&S.lang)||'ar'];close();if(window.toast)toast(m)}}).catch(function(){})};
+  tick();clearInterval(lt);lt=setInterval(tick,45000)}
+ function liveStop(){clearInterval(lt);if(sid){var s2=sid;sid=null;window.FBAPI('/api/live','POST',{sid:s2,end:true},window.CODE).catch(function(){})}}
+ var _open=open;open=function(id){_open(id);liveStart()};window.playYT=function(id){open(id)};
+ var _close=close;close=function(){liveStop();_close()};
+ $('yx').onclick=function(){close()};
+})();
+</script>
 </body>
 </html>
 
-              
+
+
+
+

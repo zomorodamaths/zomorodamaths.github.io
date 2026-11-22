@@ -202,7 +202,7 @@ html.boot #login{display:none!important}
  <footer data-i18n="foot"></footer>
 </div>
 <div class="yo" id="yo" hidden><div class="yb" id="yb"><div class="yst" id="yst"><div id="ytp"></div><div class="ysh" id="ysh"></div><div class="ycv" id="ycv">▶</div><div id="ywl" style="position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden"></div></div><div class="yct"><button class="go" id="ypl">▶</button><input type="range" id="ysk" min="0" max="1000" value="0"><small id="ytm">0:00</small><button class="go" id="ysp">1x</button><button class="go" id="yrt" aria-label="rotate">⟳</button><button class="go" id="yfs">⛶</button><button class="go" id="yx">✕</button></div></div></div>
-<div id="tm" hidden><div class="box" style="width:min(520px,100%);text-align:center;padding:26px 22px"><h2 style="margin:0 0 6px">مرحبا بكل التلاميذ في كوكب زمردة للرياضيات</h2><p style="font-weight:700;color:var(--accent);margin:0 0 16px">شعارنا: 20 في الجيب</p><p style="font-weight:700;margin:0 0 6px">حقوق النشر محفوظة</p><p style="line-height:1.9;margin:0 0 16px">تعرض المنصة علامة مائية خاصة بالحساب قابلة للتعقب، لذلك أي تسريب يؤدي بصاحبه إلى حظر دائم وغير رجعي.</p><label style="display:flex;gap:12px;align-items:center;justify-content:center;cursor:pointer;margin-bottom:18px;font-weight:700"><input type="checkbox" id="tmc" style="width:26px;height:26px;accent-color:var(--accent);flex:none"><span>أتعهد بالموافقة على سياسة المنصة</span></label><button class="cta" id="tmgo" disabled style="opacity:.45;cursor:not-allowed">دخول</button></div></div>
+<div id="tm" hidden><div class="box" style="width:min(520px,100%);text-align:center;padding:26px 22px"><h2 style="margin:0 0 6px">مرحبا بكل التلاميذ في كوكب زمردة للرياضيات</h2><p style="font-weight:700;color:var(--accent);margin:0 0 16px">شعارنا: 20 في الجيب</p><p style="font-weight:700;margin:0 0 6px">حقوق النشر محفوظة</p><p style="line-height:1.9;margin:0 0 16px">تعرض المنصة علامة مائية خاصة بالحساب قابلة للتعقب، لذلك أي تسريب يؤدي بصاحبه إلى حظر دائم وغير رجعي.</p><label style="display:flex;gap:12px;align-items:center;justify-content:center;cursor:pointer;margin-bottom:18px;font-weight:700"><input type="checkbox" id="tmc" style="width:26px;height:26px;accent-color:var(--accent);flex:none"><span>أتعهد بالموافقة على سياسة المنصة</span></label><button class="cta" id="zmok" disabled style="opacity:.45;cursor:not-allowed">دخول</button></div></div>
 <div id="boot"><div class="spin"></div></div>
 <div class="yo" id="dv" hidden><div class="dvb"><div class="dvs" id="dvs"><iframe id="dvf" sandbox="allow-scripts allow-same-origin allow-forms" referrerpolicy="no-referrer"></iframe><div id="dwl" style="position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden"></div><div class="dcc"></div><div class="dcv" id="dcv">⏸ اضغط للمتابعة</div></div><div class="yct" style="justify-content:center"><button class="go" id="dvx">✕</button></div></div></div>
 <div class="toast" id="toast"></div>
@@ -779,11 +779,11 @@ function api(path,method,body){return FBAPI(path,method,body,CODE)}
 function errText(e){return T[S.lang]['e_'+(e&&e.error)]||T[S.lang].e_net}
 function load(){return api('/api/content?year='+S.view).then(function(j){S.role=j.role;if(j.role==='student'){S.sub=S.view=j.year}DATA=j.chapters;EX=j.exams||[];FMS=j.formulas||[];MSG=j.message||null;UNREAD=j.unread||0;ls('zmc',CODE);render();if(j.role==='admin')api('/api/admin/messages').then(function(r){INBOX=r.messages;render()}).catch(function(){})}).catch(function(e){if(e&&(e.error==='invalid'||e.error==='expired'||e.error==='devices')){logout();$('lerr').textContent=errText(e)}else{toast(errText(e));render()}})}
 function login(code){CODE=code.trim().toUpperCase();window.CODE=CODE;if(!CODE)return;$('lerr').textContent='';return load().then(function(){unboot();gate()},unboot)}
-function gate(){if(S.role!=='student')return;var k='zmt_'+CODE;if(ls(k)==='1')return;$('tmc').checked=false;$('tmgo').disabled=true;$('tmgo').style.opacity='.45';$('tmgo').style.cursor='not-allowed';$('tm').hidden=false}
-function tmSync(){var o=$('tmc').checked,g=$('tmgo');g.disabled=!o;g.style.opacity=o?'1':'.45';g.style.cursor=o?'pointer':'not-allowed'}
+function gate(){if(S.role!=='student')return;var k='zmt_'+CODE;if(ls(k)==='1')return;$('tmc').checked=false;$('zmok').disabled=true;$('zmok').style.opacity='.45';$('zmok').style.cursor='not-allowed';$('tm').hidden=false}
+function tmSync(){var o=$('tmc').checked,g=$('zmok');g.disabled=!o;g.style.opacity=o?'1':'.45';g.style.cursor=o?'pointer':'not-allowed'}
 ['click','change','input'].forEach(function(ev){document.addEventListener(ev,function(e){var t=e.target;if(!t||!t.closest)return;
  if(t.closest('#tm')&&(t.id==='tmc'||t.closest('label'))){setTimeout(tmSync,0);tmSync()}
- if(ev==='click'&&t.closest('#tmgo')&&$('tmc').checked){ls('zmt_'+CODE,'1');$('tm').hidden=true}},true)});
+ if(ev==='click'&&t.closest('#zmok')&&$('tmc').checked){ls('zmt_'+CODE,'1');$('tm').hidden=true}},true)});
 function unboot(){document.documentElement.classList.remove('boot')}
 setTimeout(unboot,25000);
 function logout(){CODE='';S.role=null;DATA=[];EX=[];FMS=[];MSG=null;UNREAD=0;INBOX=[];DRAFT='';ls('zmc',null);render()}
@@ -1008,7 +1008,9 @@ var saved=ls('zmc');if(saved)login(saved);else unboot();
 </body>
 </html>
 
-                      
+
+
+
 
 
 

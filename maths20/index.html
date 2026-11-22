@@ -780,7 +780,10 @@ function errText(e){return T[S.lang]['e_'+(e&&e.error)]||T[S.lang].e_net}
 function load(){return api('/api/content?year='+S.view).then(function(j){S.role=j.role;if(j.role==='student'){S.sub=S.view=j.year}DATA=j.chapters;EX=j.exams||[];FMS=j.formulas||[];MSG=j.message||null;UNREAD=j.unread||0;ls('zmc',CODE);render();if(j.role==='admin')api('/api/admin/messages').then(function(r){INBOX=r.messages;render()}).catch(function(){})}).catch(function(e){if(e&&(e.error==='invalid'||e.error==='expired'||e.error==='devices')){logout();$('lerr').textContent=errText(e)}else{toast(errText(e));render()}})}
 function login(code){CODE=code.trim().toUpperCase();window.CODE=CODE;if(!CODE)return;$('lerr').textContent='';return load().then(function(){unboot();gate()},unboot)}
 function gate(){if(S.role!=='student')return;var k='zmt_'+CODE;if(ls(k)==='1')return;$('tmc').checked=false;$('tmgo').disabled=true;$('tmgo').style.opacity='.45';$('tmgo').style.cursor='not-allowed';$('tm').hidden=false}
-document.addEventListener('DOMContentLoaded',function(){$('tmc').onchange=function(){var o=this.checked;$('tmgo').disabled=!o;$('tmgo').style.opacity=o?'1':'.45';$('tmgo').style.cursor=o?'pointer':'not-allowed'};$('tmgo').onclick=function(){if(!$('tmc').checked)return;ls('zmt_'+CODE,'1');$('tm').hidden=true}});
+function tmSync(){var o=$('tmc').checked,g=$('tmgo');g.disabled=!o;g.style.opacity=o?'1':'.45';g.style.cursor=o?'pointer':'not-allowed'}
+['click','change','input'].forEach(function(ev){document.addEventListener(ev,function(e){var t=e.target;if(!t||!t.closest)return;
+ if(t.closest('#tm')&&(t.id==='tmc'||t.closest('label'))){setTimeout(tmSync,0);tmSync()}
+ if(ev==='click'&&t.closest('#tmgo')&&$('tmc').checked){ls('zmt_'+CODE,'1');$('tm').hidden=true}},true)});
 function unboot(){document.documentElement.classList.remove('boot')}
 setTimeout(unboot,25000);
 function logout(){CODE='';S.role=null;DATA=[];EX=[];FMS=[];MSG=null;UNREAD=0;INBOX=[];DRAFT='';ls('zmc',null);render()}
@@ -1004,3 +1007,9 @@ var saved=ls('zmc');if(saved)login(saved);else unboot();
 </script>
 </body>
 </html>
+
+                      
+
+
+
+

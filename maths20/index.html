@@ -945,7 +945,7 @@ var saved=ls('zmc');if(saved)login(saved);else unboot();
   var code=(window.S&&S.role==='admin')?'ADMIN':(window.CODE||'');
   L.innerHTML='';
   function place(){[].forEach.call(L.children,function(w){w.style.left=(2+Math.random()*78)+'%';w.style.top=(2+Math.random()*90)+'%'})}
-  for(var i=0;i<8;i++){var w=document.createElement('span');w.className='ywm';w.textContent=code;w.style.color='rgba('+WC[i]+',.06)';w.style.transform='rotate('+(Math.random()*40-20)+'deg)';L.appendChild(w)}
+  for(var i=0;i<8;i++){var w=document.createElement('span');w.className='ywm';w.textContent=code;w.style.color='rgba('+WC[i]+',.07)';w.style.transform='rotate('+(Math.random()*40-20)+'deg)';L.appendChild(w)}
   place();
   return setInterval(place,60000)};
   function wm(){clearInterval(wmt);wmt=window.zmWM($('ywl'))}
@@ -1006,12 +1006,5 @@ var saved=ls('zmc');if(saved)login(saved);else unboot();
 })();
 </script>
 </body>
-</html>
-
-
-
-
-
-
-
+</html> 
 
